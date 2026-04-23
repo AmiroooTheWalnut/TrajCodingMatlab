@@ -1,7 +1,6 @@
 clc
 clear
 isVisualize=1;
-simStartEndOffset=450;
 opts = detectImportOptions('trajTucsonDowntown.csv');
 opts = setvartype(opts, 5, 'string');
 rawTrajs = readtable('trajTucsonDowntown.csv',opts);
@@ -182,27 +181,6 @@ entryColor{2,1}=[1,0,1;1,0,0];
 entryColor{3,1}=[0,0,1;0,1,0];
 entryColor{4,1}=[1,0,1;0,1,0];
 
-entryColorCodes(4,2)=0;
-allColors=[];
-for i=1:size(entryColor,1)
-    for j=1:size(entryColor{i,1},1)
-        allColors(size(allColors,1)+1,:)=entryColor{i,1}(j,:);
-    end
-end
-uniqueColors=unique(allColors,'rows');
-numColors=size(uniqueColors,1);
-averageColorAverageDistance(numColors,1)=0;
-
-for i=1:size(entryColor,1)
-    for j=1:size(entryColor{i,1},1)
-        for k=1:size(uniqueColors,1)
-            if uniqueColors(k,:)==entryColor{i,1}(j,:)
-                entryColorCodes(i,j)=k;
-            end
-        end
-    end
-end
-
 duration=seconds(endTime-simulationTime);
 % START SIMULATION
 globalMinSameColor(numGrid,numGrid)=0;
@@ -212,7 +190,6 @@ rawCounter=1;
 rectangleHandles(numGrid,numGrid)=0;
 isVisSimActive=0;
 for i=1:duration
-    allColorLocations=cell(numColors);
     localColors=cell(numGrid,numGrid);
     % for m=1:numGrid
     %     for n=1:numGrid
@@ -262,7 +239,6 @@ for i=1:duration
                         colorValue=entryColor{m,1}(simTrajColors{m,n}(o,1),:);
                         h=scatter(x,y,80,colorValue,'filled');
                         scatterHandles(size(scatterHandles,1)+1,1)=h;
-                        % allColorLocations{}
                     end
                     for gx=1:numGrid
                         if x<minX+width*gx
@@ -283,7 +259,7 @@ for i=1:duration
     % figure(2)
     % clf
     % [minSameColor,minDiffColor]=gridAnonimity(numGrid,minX-(maxX-minX)*0.01,minY-(maxY-minY)*0.01,maxX+(maxX-minX)*0.01,maxY+(maxY-minY)*0.01);
-    if rawCounter>simStartEndOffset && rawCounter<duration-simStartEndOffset
+    if rawCounter>450 && rawCounter<duration-450
         isVisSimActive=1;
         for m=1:numGrid
             for n=1:numGrid

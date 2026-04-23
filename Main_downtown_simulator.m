@@ -1,5 +1,7 @@
 clc
 clear
+isVisualize=1;
+simStartEndOffset=450;
 opts = detectImportOptions('trajTucsonDowntown.csv');
 opts = setvartype(opts, 5, 'string');
 rawTrajs = readtable('trajTucsonDowntown.csv',opts);
@@ -11,10 +13,31 @@ rawTrajsDebug = readtable('trajTucsonDowntown_debug.csv',opts);
 trajMatDebug=table2array([rawTrajsDebug(:,2),rawTrajsDebug(:,3)]);
 uTraj=unique(trajMatDebug,'rows');
 
-figure(1)
-clf
-hold on
-drawBaseMap(uTraj,rawTrajsDebug);
+minX=min(uTraj(:,2));
+maxX=max(uTraj(:,2));
+minY=min(uTraj(:,1));
+maxY=max(uTraj(:,1));
+marginValue=0.05;
+minXTemp=minX-(maxX-minX)*marginValue;
+maxXTemp=maxX+(maxX-minX)*marginValue;
+minYTemp=minY-(maxY-minY)*marginValue;
+maxYTemp=maxY+(maxY-minY)*marginValue;
+minX=minXTemp;
+maxX=maxXTemp;
+minY=minYTemp;
+maxY=maxYTemp;
+numGrid=5;
+width=(maxX-minX)/numGrid;
+height=(maxY-minY)/numGrid;
+
+if isVisualize==1
+    figure(1)
+    clf
+    hold on
+    drawBaseMap(uTraj,rawTrajsDebug);
+    % figure(2)
+    % clf
+end
 numEntry=4;
 numExit=4;
 allTrajs=cell(numEntry,numExit);
@@ -44,9 +67,9 @@ end
 isStartFound=0;
 prevTraj=-1;
 for i=1:size(rawTrajs,1)
-%     if i==302
-%         disp('!!!')
-%     end
+    %     if i==302
+    %         disp('!!!')
+    %     end
     if isStartFound==1
         if prevTraj~=rawTrajs{i,1}
             isStartFound=0;
@@ -64,10 +87,10 @@ for i=1:size(rawTrajs,1)
     if isStartFound==0
         buildingTrajs=[];
         buildingTimes=cell(0,1);
-%         pause(2)
-%         figure(1)
-%         clf
-%         hold on
+        %         pause(2)
+        %         figure(1)
+        %         clf
+        %         hold on
         trajStartLat=rawTrajs{i,3};
         trajStartLon=rawTrajs{i,4};
         % scatter(trajStartLon,trajStartLat,75,[0,0,1],'filled')
@@ -146,7 +169,7 @@ for i=1:size(allTrajTimesteps,1)
         for k=1:size(allTrajTimesteps{i,j},1)
             lastIndex=size(allTrajTimesteps{i,j}{k,1},1);
             if allTrajTimesteps{i,j}{k,1}{lastIndex,1}>endTime
-                endTime=allTrajTimesteps{i,j}{k,1}{k,1};
+                endTime=allTrajTimesteps{i,j}{k,1}{lastIndex,1};
             end
         end
     end
@@ -155,19 +178,52 @@ disp("!")
 % ASSIGN COLOR TO ENTRIES
 entryColor=cell(numEntry,1);
 entryColor{1,1}=[1,0,0;0,0,1];
-entryColor{2,1}=[0,1,0;0,0,1];
-entryColor{3,1}=[1,0,0;0,1,0];
-entryColor{4,1}=[1,0,0;0,0,1];
+entryColor{2,1}=[1,0,1;1,0,0];
+entryColor{3,1}=[0,0,1;0,1,0];
+entryColor{4,1}=[1,0,1;0,1,0];
+
+entryColorCodes(4,2)=0;
+allColors=[];
+for i=1:size(entryColor,1)
+    for j=1:size(entryColor{i,1},1)
+        allColors(size(allColors,1)+1,:)=entryColor{i,1}(j,:);
+    end
+end
+uniqueColors=unique(allColors,'rows');
+numColors=size(uniqueColors,1);
+averageColorAverageDistance(numColors,1)=0;
+
+for i=1:size(entryColor,1)
+    for j=1:size(entryColor{i,1},1)
+        for k=1:size(uniqueColors,1)
+            if uniqueColors(k,:)==entryColor{i,1}(j,:)
+                entryColorCodes(i,j)=k;
+            end
+        end
+    end
+end
 
 duration=seconds(endTime-simulationTime);
 % START SIMULATION
+globalMinSameColor(numGrid,numGrid)=0;
+globalMinDiffColor(numGrid,numGrid)=0;
 currentTime=simulationTime;
+rawCounter=1;
+rectangleHandles(numGrid,numGrid)=0;
+isVisSimActive=0;
 for i=1:duration
+    allColorLocations=cell(numColors);
+    localColors=cell(numGrid,numGrid);
+    % for m=1:numGrid
+    %     for n=1:numGrid
+    %         localColors{m,n}=[];
+    %     end
+    % end
     for m=1:size(allTrajStates,1)
         for n=1:size(allTrajStates,2)
             for o=1:size(allTrajStates{m,n},1)
                 if allTrajStates{m,n}(o,1)==-2
-                    if allTrajTimesteps{m,n}{o,1}{1,1}>=currentTime
+                    if allTrajTimesteps{m,n}{o,1}{1,1}<=currentTime
                         allTrajStates{m,n}(o,1)=1;
                         colorIndex=1+floor(rand(1,1)*size(entryColor{m,1},1));
                         simTrajColors{m,n}(o,1)=colorIndex;
@@ -183,22 +239,91 @@ for i=1:duration
             end
         end
     end
-    figure(1)
-    clf
-    hold on
-    drawBaseMap(uTraj,rawTrajsDebug);
+    if isVisualize==1 && isVisSimActive==1
+        % figure(1)
+        % clf
+        % hold on
+        % drawBaseMap(uTraj,rawTrajsDebug);
+        if exist("scatterHandles")==1
+            for u=1:size(scatterHandles,1)
+                delete(scatterHandles(u,1));
+            end
+        end
+        scatterHandles=[];
+    end
     for m=1:size(allTrajStates,1)
         for n=1:size(allTrajStates,2)
             for o=1:size(allTrajStates{m,n},1)
                 if allTrajStates{m,n}(o,1)>0
                     ind=allTrajStates{m,n}(o,1);
-                    scatter(allTrajs{m,n}{o,1}(ind,2),allTrajs{m,n}{o,1}(ind,1),80,simTrajColors{m,n}(o,1))
+                    x=allTrajs{m,n}{o,1}(ind,2);
+                    y=allTrajs{m,n}{o,1}(ind,1);
+                    if isVisualize==1 && isVisSimActive==1
+                        colorValue=entryColor{m,1}(simTrajColors{m,n}(o,1),:);
+                        h=scatter(x,y,80,colorValue,'filled');
+                        scatterHandles(size(scatterHandles,1)+1,1)=h;
+                        % allColorLocations{}
+                    end
+                    for gx=1:numGrid
+                        if x<minX+width*gx
+                            break;
+                        end
+                    end
+                    for gy=1:numGrid
+                        if y<minY+height*gy
+                            break;
+                        end
+                    end
+                    localColors{gx,gy}(size(localColors{gx,gy},1)+1,1)=simTrajColors{m,n}(o,1);% store color code
+                    localColors{gx,gy}(size(localColors{gx,gy},1),2)=m;% store the entry the color code is coming from
                 end
             end
         end
     end
-    pause(1)
+    % figure(2)
+    % clf
+    % [minSameColor,minDiffColor]=gridAnonimity(numGrid,minX-(maxX-minX)*0.01,minY-(maxY-minY)*0.01,maxX+(maxX-minX)*0.01,maxY+(maxY-minY)*0.01);
+    if rawCounter>simStartEndOffset && rawCounter<duration-simStartEndOffset
+        isVisSimActive=1;
+        for m=1:numGrid
+            for n=1:numGrid
+                uc=size(unique(localColors{m,n}),1);
+                if uc>0 && (uc<globalMinDiffColor(m,n) || globalMinDiffColor(m,n)==0)
+                    globalMinDiffColor(m,n)=uc;
+                end
+                % if uc>1
+                %     disp("DEBUG!!!")
+                % end
+                [~,~,ix]=unique(localColors{m,n});
+                c=min(accumarray(ix,1));
+                % if size(c,1)>1
+                %     disp("DEBUG!!!")
+                % end
+                if size(c,1)>0
+                    if c>0 && (c<globalMinSameColor(m,n) || globalMinSameColor(m,n)==0)
+                        globalMinSameColor(m,n)=c;
+                    end
+                end
+                if isVisualize==1
+                    if rectangleHandles(m,n)~=0
+                        delete(rectangleHandles(m,n));
+                    end
+                    if uc==1
+                        colorValue=entryColor{localColors{m,n}(1,2),1}(localColors{m,n}(1,1),:);
+                        hr=rectangle('Position',[minX+(m-1)*width,minY+(n-1)*height,width,height],'FaceColor',colorValue,'FaceAlpha',0.4);
+                        % pause(1.0)
+                    else
+                        hr=rectangle('Position',[minX+(m-1)*width,minY+(n-1)*height,width,height],'FaceColor','none');
+                    end
+                    rectangleHandles(m,n)=hr;
+                end
+            end
+        end
+        % pause(1.0)
+    end
     currentTime=currentTime+seconds(1)
+    rawCounter=rawCounter+1
+    pause(0.001)
 end
 
 function drawBaseMap(uTraj,rawTrajsDebug)
@@ -209,7 +334,7 @@ for i=2:size(rawTrajsDebug,1)
         trajLon=rawTrajsDebug{i,3};
         trajLatNext=rawTrajsDebug{i-1,2};
         trajLonNext=rawTrajsDebug{i-1,3};
-        line([trajLon,trajLonNext],[trajLat,trajLatNext],'color',[0.2,1,0.2],'LineWidth',4)
+        line([trajLon,trajLonNext],[trajLat,trajLatNext],'color',[0.0,0,0.0],'LineWidth',4)
     end
 end
 end
