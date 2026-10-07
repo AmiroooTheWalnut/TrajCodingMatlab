@@ -3,7 +3,7 @@ clear
 epsilon=[0.1,0.5,1,2,3,4,5];
 dropProb=0.7;
 numRepeats=30;
-numEntryExit=10;
+numEntryExit=20;
 all_f_est(numEntryExit,numEntryExit,size(epsilon,2),numRepeats)=0;
 all_f_est_theory(numEntryExit,numEntryExit,size(epsilon,2),numRepeats)=0;
 all_f_truth(numEntryExit,numEntryExit,size(epsilon,2),numRepeats)=0;
