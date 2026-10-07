@@ -1,0 +1,20 @@
+clc
+clear
+epsilon=[0.1,0.5,1,2,3,4,5];
+numRepeats=30;
+all_f_est(20,20,size(epsilon,2),numRepeats)=0;
+all_f_est_theory(20,20,size(epsilon,2),numRepeats)=0;
+all_f_truth(20,20,size(epsilon,2),numRepeats)=0;
+all_exitColorStatistics(20,20,size(epsilon,2),numRepeats)=0;
+sizeE=size(epsilon,2);
+for i=1:numRepeats
+    for e=1:sizeE
+        [~,~,~,~,f_est,f_est_theory,f_truth,exitColorStatistics]=Main_phoenix_simulator_probMatrix_fcn(150,0.5,e,0.8);
+        all_f_est(:,:,e,i)=f_est;
+        all_f_est_theory(:,:,e,i)=f_est_theory;
+        all_f_truth(:,:,e,i)=f_truth;
+        all_exitColorStatistics(:,:,e,i)=exitColorStatistics;
+    end
+end
+sum(var(all_f_est,[],3),'all')
+save("GRR_f_est_epsilon_phoenix_80.mat")

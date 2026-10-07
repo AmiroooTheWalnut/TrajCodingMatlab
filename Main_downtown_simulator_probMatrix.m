@@ -4,6 +4,8 @@ downtownImg=imread("TucsonDowntownOSM2.png");
 downtownImg=imrotate(downtownImg,180);
 downtownImg = im2double(downtownImg);
 isVisualize=0;
+protectionTimePercentage=0.5;
+epsilon=1;%color selection mixture
 simStartEndOffset=500;
 protectionDistance=150;
 opts = detectImportOptions('trajTucsonDowntown_random.csv');
@@ -198,12 +200,12 @@ end
 disp("!")
 % ASSIGN COLOR TO ENTRIES
 entryColor=cell(numEntry,1);
-entryColor{1,1}=[1,0,0;0,0,1];
-entryColor{2,1}=[1,0,1;1,0,0];
-entryColor{3,1}=[0,0,1;0,1,0];
-entryColor{4,1}=[1,0,1;0,1,0];
+entryColor{1,1}=[1,0,0;0,1,0;0,0,1;1,0,1];
+entryColor{2,1}=[1,0,0;0,1,0;0,0,1;1,0,1];
+entryColor{3,1}=[1,0,0;0,1,0;0,0,1;1,0,1];
+entryColor{4,1}=[1,0,0;0,1,0;0,0,1;1,0,1];
 
-entryColorCodes(4,2)=0;
+entryColorCodes(4,4)=0;
 allColors=[];
 for i=1:size(entryColor,1)
     for j=1:size(entryColor{i,1},1)
@@ -217,7 +219,22 @@ sumColorMinDistance(numColors,1)=0;
 averageUncoveredTime(numColors,1)=0;
 sumUncoveredTime(numColors,1)=0;
 effectiveSimDuration=0;
-
+entryColorProb(numEntry,numExit)=0;
+cumEntryColorProb(numEntry,numExit)=0;
+for i=1:numEntry
+    for j=1:numEntry
+        if i==j
+            entryColorProb(i,j)=exp(epsilon)/(exp(epsilon)+3);
+        else
+            entryColorProb(i,j)=1/(exp(epsilon)+3);
+        end
+        if j==1
+            cumEntryColorProb(i,j)=entryColorProb(i,j);
+        elseif j>1
+            cumEntryColorProb(i,j)=cumEntryColorProb(i,j-1)+entryColorProb(i,j);
+        end
+    end
+end
 for i=1:size(entryColor,1)
     for j=1:size(entryColor{i,1},1)
         for k=1:size(uniqueColors,1)
@@ -254,7 +271,16 @@ for i=1:duration
                         % colorIndex=1+floor(rand(1,1)*size(entryColor{m,1},1));
                         colorIndices=entryColorCodes(m,:);
                         colorIndices=nonzeros(colorIndices);
-                        colorIndex=1+floor(rand(1,1)*size(colorIndices,1));
+                        % colorIndex=1+floor(rand(1,1)*size(colorIndices,1));
+                        val=rand(1,1);
+                        selectedIndex=1;
+                        for q=1:numEntry
+                            if val<cumEntryColorProb(m,q)% m is entry q is color index
+                                selectedIndex=q;
+                                break;
+                            end
+                        end
+                        colorIndex=entryColorCodes(m,selectedIndex);
                         simTrajColors{m,n}(o,1)=colorIndices(colorIndex,1);
                     end
                 elseif allTrajStates{m,n}(o,1)>0
@@ -453,10 +479,13 @@ disp(["numIsolatedTrajs: ",num2str(numIsolatedTrajs)])
 disp(["averageMinDistColor: ",outStr])
 allAvgIsolatedTimePercentages=0;
 counter=0;
-
+totalProtected=0;
 for i=1:size(numIsolatedTrajIndices,1)
     if numTrajJumps(i,1)>0
         isolatedTimePercentage=numIsolatedTrajIndices(i,1)/numTrajJumps(i,1);
+        if isolatedTimePercentage>protectionTimePercentage
+            totalProtected=totalProtected+1;
+        end
         allAvgIsolatedTimePercentages=allAvgIsolatedTimePercentages+isolatedTimePercentage;
         counter=counter+1;
     end

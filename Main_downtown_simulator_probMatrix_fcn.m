@@ -1,209 +1,215 @@
-clc
-clear
-downtownImg=imread("TucsonDowntownOSM2.png");
-downtownImg=imrotate(downtownImg,180);
-downtownImg = im2double(downtownImg);
-isVisualize=0;
-simStartEndOffset=500;
-protectionDistance=150;
-opts = detectImportOptions('trajTucsonDowntown_random.csv');
-opts = setvartype(opts, 5, 'string');
-rawTrajs = readtable('trajTucsonDowntown_random.csv',opts);
+function [totalCars,totalIsolated,numIsolatedTrajs,avgIsolatedTimePercentages]=Main_downtown_simulator_probMatrix_fcn(protectionDistance, ...
+    protectionTimePercentage,epsilon,preprocessFile)
+if isnumeric(preprocessFile)==1 || isfile(preprocessFile)==0
+    downtownImg=imread("TucsonDowntownOSM2.png");
+    downtownImg=imrotate(downtownImg,180);
+    downtownImg = im2double(downtownImg);
+    isVisualize=0;
+    % epsilon=0.1;%color selection mixture
+    simStartEndOffset=500;
+    % protectionDistance=150;
+    opts = detectImportOptions('trajTucsonDowntown_random.csv');
+    opts = setvartype(opts, 5, 'string');
+    rawTrajs = readtable('trajTucsonDowntown_random.csv',opts);
 
-opts = detectImportOptions('trajTucsonDowntown_random_debug.csv');
-opts = setvartype(opts, 4, 'string');
-rawTrajsDebug = readtable('trajTucsonDowntown_random_debug.csv',opts);
+    opts = detectImportOptions('trajTucsonDowntown_random_debug.csv');
+    opts = setvartype(opts, 4, 'string');
+    rawTrajsDebug = readtable('trajTucsonDowntown_random_debug.csv',opts);
 
-trajMatDebug=table2array([rawTrajsDebug(:,2),rawTrajsDebug(:,3)]);
-uTraj=unique(trajMatDebug,'rows');
+    trajMatDebug=table2array([rawTrajsDebug(:,2),rawTrajsDebug(:,3)]);
+    uTraj=unique(trajMatDebug,'rows');
 
-minX=min(uTraj(:,2));
-maxX=max(uTraj(:,2));
-minY=min(uTraj(:,1));
-maxY=max(uTraj(:,1));
-marginValue=0.02;
-minXTemp=minX-(maxX-minX)*marginValue;
-maxXTemp=maxX+(maxX-minX)*marginValue;
-minYTemp=minY-(maxY-minY)*marginValue;
-maxYTemp=maxY+(maxY-minY)*marginValue;
-minX=minXTemp;
-maxX=maxXTemp;
-minY=minYTemp;
-maxY=maxYTemp;
-numGrid=5;
-width=(maxX-minX)/numGrid;
-height=(maxY-minY)/numGrid;
+    minX=min(uTraj(:,2));
+    maxX=max(uTraj(:,2));
+    minY=min(uTraj(:,1));
+    maxY=max(uTraj(:,1));
+    marginValue=0.02;
+    minXTemp=minX-(maxX-minX)*marginValue;
+    maxXTemp=maxX+(maxX-minX)*marginValue;
+    minYTemp=minY-(maxY-minY)*marginValue;
+    maxYTemp=maxY+(maxY-minY)*marginValue;
+    minX=minXTemp;
+    maxX=maxXTemp;
+    minY=minYTemp;
+    maxY=maxYTemp;
+    numGrid=5;
+    width=(maxX-minX)/numGrid;
+    height=(maxY-minY)/numGrid;
 
-if isVisualize==1
-    figure(1)
-    clf
-    hold on
-    imagesc([-110.9530 -110.98039], [32.20432 32.2268], downtownImg);
-    drawBaseMap(uTraj,rawTrajsDebug);
-    % figure(2)
-    % clf
-end
-numEntry=4;
-numExit=4;
-allTrajs=cell(numEntry,numExit);
-allTrajTimesteps=cell(numEntry,numExit);
-
-
-%
-% STATE -2 MEANS THAT TRAJECTORY HAS NOT STARTED TO SIMULATE
-% STATE -1 MEANS THAT TRAJECTORY SIMULATION HAS FINISHED
-% STATE >=1 MEANS THAT TRAJECTORY IS SIMULATING REPRESENTING THE LAST
-%   ACTIVE INDEX IN THE TRAJECTORY
-% SECOND COLUMN IS THE INDEX OF TRAJECOTRY
-allTrajStates=cell(numEntry,numExit);
-
-%
-% THE INDEX OF THE COLOR IS STORED. THE COLOR IS EXTRACTED BY USING THE
-% "entryColor" VARIABLE
-%
-simTrajColors=cell(numEntry,numExit);
-for i=1:numEntry
-    for j=1:numExit
-        allTrajs{i,j}=cell(0,1);
-        simTrajColors{i,j}=cell(0,1);
-        allTrajStates{i,j}=cell(0,1);
-        allTrajTimesteps{i,j}=cell(0,1);
+    if isVisualize==1
+        figure(1)
+        clf
+        hold on
+        imagesc([-110.9530 -110.98039], [32.20432 32.2268], downtownImg);
+        drawBaseMap(uTraj,rawTrajsDebug);
+        % figure(2)
+        % clf
     end
-end
+    numEntry=4;
+    numExit=4;
+    allTrajs=cell(numEntry,numExit);
+    allTrajTimesteps=cell(numEntry,numExit);
 
-isStartFound=0;
-prevTraj=-1;
-for i=1:size(rawTrajs,1)
-    %     if i==302
-    %         disp('!!!')
-    %     end
-    if isStartFound==1
-        if prevTraj~=rawTrajs{i,1}
-            isStartFound=0;
+
+    %
+    % STATE -2 MEANS THAT TRAJECTORY HAS NOT STARTED TO SIMULATE
+    % STATE -1 MEANS THAT TRAJECTORY SIMULATION HAS FINISHED
+    % STATE >=1 MEANS THAT TRAJECTORY IS SIMULATING REPRESENTING THE LAST
+    %   ACTIVE INDEX IN THE TRAJECTORY
+    % SECOND COLUMN IS THE INDEX OF TRAJECOTRY
+    allTrajStates=cell(numEntry,numExit);
+
+    %
+    % THE INDEX OF THE COLOR IS STORED. THE COLOR IS EXTRACTED BY USING THE
+    % "entryColor" VARIABLE
+    %
+    simTrajColors=cell(numEntry,numExit);
+    for i=1:numEntry
+        for j=1:numExit
+            allTrajs{i,j}=cell(0,1);
+            simTrajColors{i,j}=cell(0,1);
+            allTrajStates{i,j}=cell(0,1);
+            allTrajTimesteps{i,j}=cell(0,1);
         end
     end
-    vals=split(rawTrajs{i,2}{1,1},'_');
-    if isStartFound==0
-        if exist("buildingTrajs","var")==1
-            allTrajs{inInd+1,outInd+1}{size(allTrajs{inInd+1,outInd+1},1)+1,1}=buildingTrajs;
-            allTrajTimesteps{inInd+1,outInd+1}{size(allTrajTimesteps{inInd+1,outInd+1},1)+1,1}=buildingTimes;
+
+    isStartFound=0;
+    prevTraj=-1;
+    for i=1:size(rawTrajs,1)
+        %     if i==302
+        %         disp('!!!')
+        %     end
+        if isStartFound==1
+            if prevTraj~=rawTrajs{i,1}
+                isStartFound=0;
+            end
         end
-    end
-    inInd=str2num(vals{1,1});
-    outInd=str2num(vals{2,1});
-    if isStartFound==0
-        buildingTrajs=[];
-        buildingTimes=cell(0,1);
-        %         pause(2)
-        %         figure(1)
-        %         clf
-        %         hold on
-        trajStartLat=rawTrajs{i,3};
-        trajStartLon=rawTrajs{i,4};
-        % scatter(trajStartLon,trajStartLat,75,[0,0,1],'filled')
-        isStartFound=1;
-        prevTraj=rawTrajs{i,1};
-        if i~=1 && i~=size(rawTrajs,1)
-            trajEndLat=rawTrajs{i-1,3};
-            trajEndLon=rawTrajs{i-1,4};
-            % scatter(trajEndLon,trajEndLat,75,[1,0,0],'filled')
+        vals=split(rawTrajs{i,2}{1,1},'_');
+        if isStartFound==0
+            if exist("buildingTrajs","var")==1
+                allTrajs{inInd+1,outInd+1}{size(allTrajs{inInd+1,outInd+1},1)+1,1}=buildingTrajs;
+                allTrajTimesteps{inInd+1,outInd+1}{size(allTrajTimesteps{inInd+1,outInd+1},1)+1,1}=buildingTimes;
+            end
         end
-        if i==size(rawTrajs,1)
-            trajEndLat=rawTrajs{i-1,3};
-            trajEndLon=rawTrajs{i-1,4};
-            % scatter(trajEndLon,trajEndLat,75,[1,0,0],'filled')
-        end
-        buildingTrajs(size(buildingTrajs,1)+1,1)=trajStartLat;
-        buildingTrajs(size(buildingTrajs,1),2)=trajStartLon;
-        try
-            d=datetime(rawTrajs{i,5},"InputFormat","yyyy-MM-dd'T'HH:mm:ss");
-        catch
+        inInd=str2num(vals{1,1});
+        outInd=str2num(vals{2,1});
+        if isStartFound==0
+            buildingTrajs=[];
+            buildingTimes=cell(0,1);
+            %         pause(2)
+            %         figure(1)
+            %         clf
+            %         hold on
+            trajStartLat=rawTrajs{i,3};
+            trajStartLon=rawTrajs{i,4};
+            % scatter(trajStartLon,trajStartLat,75,[0,0,1],'filled')
+            isStartFound=1;
+            prevTraj=rawTrajs{i,1};
+            if i~=1 && i~=size(rawTrajs,1)
+                trajEndLat=rawTrajs{i-1,3};
+                trajEndLon=rawTrajs{i-1,4};
+                % scatter(trajEndLon,trajEndLat,75,[1,0,0],'filled')
+            end
+            if i==size(rawTrajs,1)
+                trajEndLat=rawTrajs{i-1,3};
+                trajEndLon=rawTrajs{i-1,4};
+                % scatter(trajEndLon,trajEndLat,75,[1,0,0],'filled')
+            end
+            buildingTrajs(size(buildingTrajs,1)+1,1)=trajStartLat;
+            buildingTrajs(size(buildingTrajs,1),2)=trajStartLon;
             try
-                d=datetime(rawTrajs{i,5},"InputFormat","yyyy-MM-dd'T'HH:mm");
-            catch exception
-                rethrow(exception)
+                d=datetime(rawTrajs{i,5},"InputFormat","yyyy-MM-dd'T'HH:mm:ss");
+            catch
+                try
+                    d=datetime(rawTrajs{i,5},"InputFormat","yyyy-MM-dd'T'HH:mm");
+                catch exception
+                    rethrow(exception)
+                end
             end
-        end
-        buildingTimes{size(buildingTimes,1)+1,1}=d;
-    else
-        trajLat=rawTrajs{i,3};
-        trajLon=rawTrajs{i,4};
-        buildingTrajs(size(buildingTrajs,1)+1,1)=trajLat;
-        buildingTrajs(size(buildingTrajs,1),2)=trajLon;
-        try
-            d=datetime(rawTrajs{i,5},"InputFormat","yyyy-MM-dd'T'HH:mm:ss");
-        catch
+            buildingTimes{size(buildingTimes,1)+1,1}=d;
+        else
+            trajLat=rawTrajs{i,3};
+            trajLon=rawTrajs{i,4};
+            buildingTrajs(size(buildingTrajs,1)+1,1)=trajLat;
+            buildingTrajs(size(buildingTrajs,1),2)=trajLon;
             try
-                d=datetime(rawTrajs{i,5},"InputFormat","yyyy-MM-dd'T'HH:mm");
-            catch exception
-                rethrow(exception)
+                d=datetime(rawTrajs{i,5},"InputFormat","yyyy-MM-dd'T'HH:mm:ss");
+            catch
+                try
+                    d=datetime(rawTrajs{i,5},"InputFormat","yyyy-MM-dd'T'HH:mm");
+                catch exception
+                    rethrow(exception)
+                end
+            end
+            buildingTimes{size(buildingTimes,1)+1,1}=d;
+            if i~=size(rawTrajs,1)
+                trajLatNext=rawTrajs{i-1,3};
+                trajLonNext=rawTrajs{i-1,4};
+                % line([trajLon,trajLonNext],[trajLat,trajLatNext],'color',[0.2,1,0.2],'LineWidth',4)
+            end
+            % scatter(trajLon,trajLat,30,[0.8,1,0],'filled')
+        end
+        % pause(0.02)
+    end
+    allTrajs{inInd+1,outInd+1}{size(allTrajs{inInd+1,outInd+1},1)+1,1}=buildingTrajs;
+    allTrajTimesteps{inInd+1,outInd+1}{size(allTrajTimesteps{inInd+1,outInd+1},1)+1,1}=buildingTimes;
+    for i=1:size(allTrajs,1)
+        for j=1:size(allTrajs,2)
+            allTrajStates{i,j}=zeros([size(allTrajs{i,j},1),1])-2;
+            simTrajColors{i,j}=zeros([size(allTrajs{i,j},1),1]);
+        end
+    end
+    idCounter=1;
+    for m=1:size(allTrajStates,1)
+        for n=1:size(allTrajStates,2)
+            for o=1:size(allTrajStates{m,n},1)
+                allTrajStates{m,n}(o,2)=idCounter;
+                idCounter=idCounter+1;
             end
         end
-        buildingTimes{size(buildingTimes,1)+1,1}=d;
-        if i~=size(rawTrajs,1)
-            trajLatNext=rawTrajs{i-1,3};
-            trajLonNext=rawTrajs{i-1,4};
-            % line([trajLon,trajLonNext],[trajLat,trajLatNext],'color',[0.2,1,0.2],'LineWidth',4)
-        end
-        % scatter(trajLon,trajLat,30,[0.8,1,0],'filled')
     end
-    % pause(0.02)
-end
-allTrajs{inInd+1,outInd+1}{size(allTrajs{inInd+1,outInd+1},1)+1,1}=buildingTrajs;
-allTrajTimesteps{inInd+1,outInd+1}{size(allTrajTimesteps{inInd+1,outInd+1},1)+1,1}=buildingTimes;
-for i=1:size(allTrajs,1)
-    for j=1:size(allTrajs,2)
-        allTrajStates{i,j}=zeros([size(allTrajs{i,j},1),1])-2;
-        simTrajColors{i,j}=zeros([size(allTrajs{i,j},1),1]);
-    end
-end
-idCounter=1;
-for m=1:size(allTrajStates,1)
-    for n=1:size(allTrajStates,2)
-        for o=1:size(allTrajStates{m,n},1)
-            allTrajStates{m,n}(o,2)=idCounter;
-            idCounter=idCounter+1;
-        end
-    end
-end
 
-% ROW IS TRAJ ID, VALUE IS NUMBER OF REPEATS
-numIsolatedTrajIndices(idCounter-1,1)=0;
-numTrajJumps(idCounter-1,1)=0;
+    % ROW IS TRAJ ID, VALUE IS NUMBER OF REPEATS
+    numIsolatedTrajIndices(idCounter-1,1)=0;
+    numTrajJumps(idCounter-1,1)=0;
 
-% FINISHED PREPROCESSING ALL TRAJECTORIES, READY TO START SIMULATION
-% FIND EARLIEST TIME
-simulationTime=allTrajTimesteps{1,1}{1,1}{1,1};
-for i=1:size(allTrajTimesteps,1)
-    for j=1:size(allTrajTimesteps,2)
-        for k=1:size(allTrajTimesteps{i,j},1)
-            if allTrajTimesteps{i,j}{k,1}{1,1}<simulationTime
-                simulationTime=allTrajTimesteps{i,j}{k,1}{1,1};
+    % FINISHED PREPROCESSING ALL TRAJECTORIES, READY TO START SIMULATION
+    % FIND EARLIEST TIME
+    simulationTime=allTrajTimesteps{1,1}{1,1}{1,1};
+    for i=1:size(allTrajTimesteps,1)
+        for j=1:size(allTrajTimesteps,2)
+            for k=1:size(allTrajTimesteps{i,j},1)
+                if allTrajTimesteps{i,j}{k,1}{1,1}<simulationTime
+                    simulationTime=allTrajTimesteps{i,j}{k,1}{1,1};
+                end
             end
         end
     end
-end
-% FIND LAST TIME
-endTime=allTrajTimesteps{1,1}{1,1}{1,1};
-for i=1:size(allTrajTimesteps,1)
-    for j=1:size(allTrajTimesteps,2)
-        for k=1:size(allTrajTimesteps{i,j},1)
-            lastIndex=size(allTrajTimesteps{i,j}{k,1},1);
-            if allTrajTimesteps{i,j}{k,1}{lastIndex,1}>endTime
-                endTime=allTrajTimesteps{i,j}{k,1}{lastIndex,1};
+    % FIND LAST TIME
+    endTime=allTrajTimesteps{1,1}{1,1}{1,1};
+    for i=1:size(allTrajTimesteps,1)
+        for j=1:size(allTrajTimesteps,2)
+            for k=1:size(allTrajTimesteps{i,j},1)
+                lastIndex=size(allTrajTimesteps{i,j}{k,1},1);
+                if allTrajTimesteps{i,j}{k,1}{lastIndex,1}>endTime
+                    endTime=allTrajTimesteps{i,j}{k,1}{lastIndex,1};
+                end
             end
         end
     end
+    save("simulationPreprocessed.mat","-regexp","^(?!(protectionDistance|protectionPercentage|epsilon|preprocessFile)$).")
+else
+    load(preprocessFile)
 end
-disp("!")
+% disp("!")
 % ASSIGN COLOR TO ENTRIES
 entryColor=cell(numEntry,1);
-entryColor{1,1}=[1,0,0;0,0,1];
-entryColor{2,1}=[1,0,1;1,0,0];
-entryColor{3,1}=[0,0,1;0,1,0];
-entryColor{4,1}=[1,0,1;0,1,0];
+entryColor{1,1}=[1,0,0;0,1,0;0,0,1;1,0,1];
+entryColor{2,1}=[1,0,0;0,1,0;0,0,1;1,0,1];
+entryColor{3,1}=[1,0,0;0,1,0;0,0,1;1,0,1];
+entryColor{4,1}=[1,0,0;0,1,0;0,0,1;1,0,1];
 
-entryColorCodes(4,2)=0;
+entryColorCodes(4,4)=0;
 allColors=[];
 for i=1:size(entryColor,1)
     for j=1:size(entryColor{i,1},1)
@@ -217,7 +223,22 @@ sumColorMinDistance(numColors,1)=0;
 averageUncoveredTime(numColors,1)=0;
 sumUncoveredTime(numColors,1)=0;
 effectiveSimDuration=0;
-
+entryColorProb(numEntry,numExit)=0;
+cumEntryColorProb(numEntry,numExit)=0;
+for i=1:numEntry
+    for j=1:numEntry
+        if i==j
+            entryColorProb(i,j)=exp(epsilon)/(exp(epsilon)+3);
+        else
+            entryColorProb(i,j)=1/(exp(epsilon)+3);
+        end
+        if j==1
+            cumEntryColorProb(i,j)=entryColorProb(i,j);
+        elseif j>1
+            cumEntryColorProb(i,j)=cumEntryColorProb(i,j-1)+entryColorProb(i,j);
+        end
+    end
+end
 for i=1:size(entryColor,1)
     for j=1:size(entryColor{i,1},1)
         for k=1:size(uniqueColors,1)
@@ -254,7 +275,16 @@ for i=1:duration
                         % colorIndex=1+floor(rand(1,1)*size(entryColor{m,1},1));
                         colorIndices=entryColorCodes(m,:);
                         colorIndices=nonzeros(colorIndices);
-                        colorIndex=1+floor(rand(1,1)*size(colorIndices,1));
+                        % colorIndex=1+floor(rand(1,1)*size(colorIndices,1));
+                        val=rand(1,1);
+                        selectedIndex=1;
+                        for q=1:numEntry
+                            if val<cumEntryColorProb(m,q)% m is entry q is color index
+                                selectedIndex=q;
+                                break;
+                            end
+                        end
+                        colorIndex=entryColorCodes(m,selectedIndex);
                         simTrajColors{m,n}(o,1)=colorIndices(colorIndex,1);
                     end
                 elseif allTrajStates{m,n}(o,1)>0
@@ -419,8 +449,8 @@ for i=1:duration
         % pause(1.0)
         effectiveSimDuration=effectiveSimDuration+1;
     end
-    currentTime=currentTime+seconds(1)
-    rawCounter=rawCounter+1
+    currentTime=currentTime+seconds(1);
+    rawCounter=rawCounter+1;
     pause(0.001)
 end
 for c=1:size(allColorLocations,1)
@@ -453,15 +483,22 @@ disp(["numIsolatedTrajs: ",num2str(numIsolatedTrajs)])
 disp(["averageMinDistColor: ",outStr])
 allAvgIsolatedTimePercentages=0;
 counter=0;
-
+totalIsolated=0;
 for i=1:size(numIsolatedTrajIndices,1)
     if numTrajJumps(i,1)>0
         isolatedTimePercentage=numIsolatedTrajIndices(i,1)/numTrajJumps(i,1);
+        if isolatedTimePercentage>protectionTimePercentage
+            totalIsolated=totalIsolated+1;
+        end
         allAvgIsolatedTimePercentages=allAvgIsolatedTimePercentages+isolatedTimePercentage;
         counter=counter+1;
     end
 end
-disp(["avg Time isolated: ",num2str(allAvgIsolatedTimePercentages/counter)])
+avgIsolatedTimePercentages=allAvgIsolatedTimePercentages/counter;
+disp(["avg Time isolated: ",num2str(avgIsolatedTimePercentages)])
+
+totalCars=size(numIsolatedTrajIndices,1);
+end
 
 function drawBaseMap(uTraj,rawTrajsDebug)
 % scatter(uTraj(:,2),uTraj(:,1),[],[0,0,1])
@@ -481,8 +518,4 @@ for i=2:size(rawTrajsDebug,1)
         scatter(trajLonNext,trajLatNext,250,"white","filled",'Marker','square','MarkerEdgeColor','black')
     end
 end
-end
-
-function sumSameColorDistCalc()
-
 end

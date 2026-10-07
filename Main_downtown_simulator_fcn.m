@@ -1,14 +1,17 @@
-clc
-clear
-isVisualize=1;
-simStartEndOffset=450;
-opts = detectImportOptions('trajTucsonDowntown.csv');
+function totalProtected=Main_downtown_simulator_fcn(protectionDistance,protectionTimePercentage)
+downtownImg=imread("TucsonDowntownOSM2.png");
+downtownImg=imrotate(downtownImg,180);
+downtownImg = im2double(downtownImg);
+isVisualize=0;
+simStartEndOffset=500;
+% protectionDistance=150;
+opts = detectImportOptions('trajTucsonDowntown_random.csv');
 opts = setvartype(opts, 5, 'string');
-rawTrajs = readtable('trajTucsonDowntown.csv',opts);
+rawTrajs = readtable('trajTucsonDowntown_random.csv',opts);
 
-opts = detectImportOptions('trajTucsonDowntown_debug.csv');
+opts = detectImportOptions('trajTucsonDowntown_random_debug.csv');
 opts = setvartype(opts, 4, 'string');
-rawTrajsDebug = readtable('trajTucsonDowntown_debug.csv',opts);
+rawTrajsDebug = readtable('trajTucsonDowntown_random_debug.csv',opts);
 
 trajMatDebug=table2array([rawTrajsDebug(:,2),rawTrajsDebug(:,3)]);
 uTraj=unique(trajMatDebug,'rows');
@@ -17,7 +20,7 @@ minX=min(uTraj(:,2));
 maxX=max(uTraj(:,2));
 minY=min(uTraj(:,1));
 maxY=max(uTraj(:,1));
-marginValue=0.05;
+marginValue=0.02;
 minXTemp=minX-(maxX-minX)*marginValue;
 maxXTemp=maxX+(maxX-minX)*marginValue;
 minYTemp=minY-(maxY-minY)*marginValue;
@@ -34,6 +37,7 @@ if isVisualize==1
     figure(1)
     clf
     hold on
+    imagesc([-110.9530 -110.98039], [32.20432 32.2268], downtownImg);
     drawBaseMap(uTraj,rawTrajsDebug);
     % figure(2)
     % clf
@@ -43,11 +47,13 @@ numExit=4;
 allTrajs=cell(numEntry,numExit);
 allTrajTimesteps=cell(numEntry,numExit);
 
+
 %
 % STATE -2 MEANS THAT TRAJECTORY HAS NOT STARTED TO SIMULATE
 % STATE -1 MEANS THAT TRAJECTORY SIMULATION HAS FINISHED
 % STATE >=1 MEANS THAT TRAJECTORY IS SIMULATING REPRESENTING THE LAST
 %   ACTIVE INDEX IN THE TRAJECTORY
+% SECOND COLUMN IS THE INDEX OF TRAJECOTRY
 allTrajStates=cell(numEntry,numExit);
 
 %
@@ -150,6 +156,20 @@ for i=1:size(allTrajs,1)
         simTrajColors{i,j}=zeros([size(allTrajs{i,j},1),1]);
     end
 end
+idCounter=1;
+for m=1:size(allTrajStates,1)
+    for n=1:size(allTrajStates,2)
+        for o=1:size(allTrajStates{m,n},1)
+            allTrajStates{m,n}(o,2)=idCounter;
+            idCounter=idCounter+1;
+        end
+    end
+end
+
+% ROW IS TRAJ ID, VALUE IS NUMBER OF REPEATS
+numIsolatedTrajIndices(idCounter-1,1)=0;
+numTrajJumps(idCounter-1,1)=0;
+
 % FINISHED PREPROCESSING ALL TRAJECTORIES, READY TO START SIMULATION
 % FIND EARLIEST TIME
 simulationTime=allTrajTimesteps{1,1}{1,1}{1,1};
@@ -192,6 +212,10 @@ end
 uniqueColors=unique(allColors,'rows');
 numColors=size(uniqueColors,1);
 averageColorAverageDistance(numColors,1)=0;
+sumColorMinDistance(numColors,1)=0;
+averageUncoveredTime(numColors,1)=0;
+sumUncoveredTime(numColors,1)=0;
+effectiveSimDuration=0;
 
 for i=1:size(entryColor,1)
     for j=1:size(entryColor{i,1},1)
@@ -212,7 +236,8 @@ rawCounter=1;
 rectangleHandles(numGrid,numGrid)=0;
 isVisSimActive=0;
 for i=1:duration
-    allColorLocations=cell(numColors);
+    % INSIDE EACH CELL (Nx3), FIRST LAT SECOND LON THIRD TRAJ INDEX
+    allColorLocations=cell(numColors,1);
     localColors=cell(numGrid,numGrid);
     % for m=1:numGrid
     %     for n=1:numGrid
@@ -225,15 +250,26 @@ for i=1:duration
                 if allTrajStates{m,n}(o,1)==-2
                     if allTrajTimesteps{m,n}{o,1}{1,1}<=currentTime
                         allTrajStates{m,n}(o,1)=1;
-                        colorIndex=1+floor(rand(1,1)*size(entryColor{m,1},1));
-                        simTrajColors{m,n}(o,1)=colorIndex;
+                        % colorIndex=1+floor(rand(1,1)*size(entryColor{m,1},1));
+                        colorIndices=entryColorCodes(m,:);
+                        colorIndices=nonzeros(colorIndices);
+                        colorIndex=1+floor(rand(1,1)*size(colorIndices,1));
+                        simTrajColors{m,n}(o,1)=colorIndices(colorIndex,1);
                     end
                 elseif allTrajStates{m,n}(o,1)>0
                     lastIndex=size(allTrajTimesteps{m,n}{o,1},1);
-                    if allTrajTimesteps{m,n}{o,1}{lastIndex,1}<currentTime
+                    if allTrajTimesteps{m,n}{o,1}{lastIndex,1}<=currentTime
                         allTrajStates{m,n}(o,1)=-1;
                     elseif allTrajTimesteps{m,n}{o,1}{allTrajStates{m,n}(o,1)+1,1}<=currentTime
-                        allTrajStates{m,n}(o,1)=allTrajStates{m,n}(o,1)+1;
+                        initV=allTrajStates{m,n}(o,1)+1;
+                        for q=initV:size(allTrajTimesteps{m,n}{o,1},1)
+                            if allTrajTimesteps{m,n}{o,1}{q,1}<=currentTime
+                                allTrajStates{m,n}(o,1)=q;
+                            else
+                                break;
+                            end
+                        end
+                        % allTrajStates{m,n}(o,1)=allTrajStates{m,n}(o,1)+1;
                     end
                 end
             end
@@ -258,12 +294,38 @@ for i=1:duration
                     ind=allTrajStates{m,n}(o,1);
                     x=allTrajs{m,n}{o,1}(ind,2);
                     y=allTrajs{m,n}{o,1}(ind,1);
+                    if ind<size(allTrajs{m,n}{o,1},1)-1
+                        startTime=allTrajTimesteps{m,n}{o,1}{ind,1};
+                        endTime=allTrajTimesteps{m,n}{o,1}{ind+1,1};
+                        localDuration=seconds(endTime-startTime);
+                        if localDuration>=1
+                            % if localDuration==0
+                            %     localDuration
+                            % end
+                            passedDuration=seconds(currentTime-startTime);
+                            localLambda=passedDuration/localDuration;
+                            % if localLambda>10 || localLambda<0
+                            %     localLambda
+                            % end
+                            % if passedDuration>localDuration+10
+                            %     passedDuration-localDuration
+                            % end
+                            endX=allTrajs{m,n}{o,1}(ind+1,2);
+                            endY=allTrajs{m,n}{o,1}(ind+1,1);
+                            x=x*(1-localLambda)+localLambda*endX;
+                            y=y*(1-localLambda)+localLambda*endY;
+                        end
+                    end
+
+                    % colorValue=entryColor{m,1}(simTrajColors{m,n}(o,1),:);
+                    colorValue=uniqueColors(simTrajColors{m,n}(o,1),:);
                     if isVisualize==1 && isVisSimActive==1
-                        colorValue=entryColor{m,1}(simTrajColors{m,n}(o,1),:);
                         h=scatter(x,y,80,colorValue,'filled');
                         scatterHandles(size(scatterHandles,1)+1,1)=h;
-                        % allColorLocations{}
                     end
+                    maxSize=size(allColorLocations{simTrajColors{m,n}(o,1),1},1);
+                    allColorLocations{simTrajColors{m,n}(o,1),1}(maxSize+1,:)=[x,y,allTrajStates{m,n}(o,2)];
+
                     for gx=1:numGrid
                         if x<minX+width*gx
                             break;
@@ -285,6 +347,39 @@ for i=1:duration
     % [minSameColor,minDiffColor]=gridAnonimity(numGrid,minX-(maxX-minX)*0.01,minY-(maxY-minY)*0.01,maxX+(maxX-minX)*0.01,maxY+(maxY-minY)*0.01);
     if rawCounter>simStartEndOffset && rawCounter<duration-simStartEndOffset
         isVisSimActive=1;
+        for c=1:size(allColorLocations,1)
+            minDist=10000;
+            for m=1:size(allColorLocations{c,1},1)
+                minDistInternal=10000;
+                for n=m+1:size(allColorLocations{c,1},1)
+                    if m~=n
+                        dx=allColorLocations{c,1}(m,1)-allColorLocations{c,1}(n,1);
+                        dy=allColorLocations{c,1}(m,2)-allColorLocations{c,1}(n,2);
+                        d=sqrt(dx^2+dy^2);
+                        if d<minDist
+                            minDist=d;
+                        end
+                        if d<minDistInternal
+                            minDistInternal=d;
+                        end
+                        % if d~=0
+                        %     disp('DEBUG!!!!')
+                        % end
+                    end
+                end
+                if minDistInternal*6.8986113164*22*1609.34>protectionDistance
+                    numIsolatedTrajIndices(allColorLocations{c,1}(m,3),1)=numIsolatedTrajIndices(allColorLocations{c,1}(m,3),1)+1;
+                    % disp('DEBUG!!!!')
+                elseif numIsolatedTrajIndices(allColorLocations{c,1}(m,3),1)<300
+                    numIsolatedTrajIndices(allColorLocations{c,1}(m,3),1)=0;
+                end
+                numTrajJumps(allColorLocations{c,1}(m,3),1)=numTrajJumps(allColorLocations{c,1}(m,3),1)+1;
+            end
+            if minDist<10000
+                sumColorMinDistance(c,1)=sumColorMinDistance(c,1)+minDist;
+            end
+        end
+
         for m=1:numGrid
             for n=1:numGrid
                 uc=size(unique(localColors{m,n}),1);
@@ -304,26 +399,72 @@ for i=1:duration
                         globalMinSameColor(m,n)=c;
                     end
                 end
-                if isVisualize==1
-                    if rectangleHandles(m,n)~=0
-                        delete(rectangleHandles(m,n));
-                    end
-                    if uc==1
-                        colorValue=entryColor{localColors{m,n}(1,2),1}(localColors{m,n}(1,1),:);
-                        hr=rectangle('Position',[minX+(m-1)*width,minY+(n-1)*height,width,height],'FaceColor',colorValue,'FaceAlpha',0.4);
-                        % pause(1.0)
-                    else
-                        hr=rectangle('Position',[minX+(m-1)*width,minY+(n-1)*height,width,height],'FaceColor','none');
-                    end
-                    rectangleHandles(m,n)=hr;
-                end
+                % if isVisualize==1
+                %     if rectangleHandles(m,n)~=0
+                %         delete(rectangleHandles(m,n));
+                %     end
+                %     if uc==1
+                %         % colorValue=entryColor{localColors{m,n}(1,2),1}(localColors{m,n}(1,1),:);
+                %         colorValue=uniqueColors(localColors{m,n}(1,1),:);
+                %         hr=rectangle('Position',[minX+(m-1)*width,minY+(n-1)*height,width,height],'FaceColor',colorValue,'FaceAlpha',0.4);
+                %         % pause(1.0)
+                %     else
+                %         hr=rectangle('Position',[minX+(m-1)*width,minY+(n-1)*height,width,height],'FaceColor','none');
+                %     end
+                %     rectangleHandles(m,n)=hr;
+                % end
             end
         end
         % pause(1.0)
+        effectiveSimDuration=effectiveSimDuration+1;
     end
     currentTime=currentTime+seconds(1)
     rawCounter=rawCounter+1
     pause(0.001)
+end
+for c=1:size(allColorLocations,1)
+    averageColorAverageDistance(c,1)=(sumColorMinDistance(c,1)/effectiveSimDuration)*6.8986113164*22*1609.34;
+end
+numIsolatedTrajs=0;
+for i=1:size(numIsolatedTrajIndices,1)
+    if numIsolatedTrajIndices(i,1)>300
+        numIsolatedTrajs=numIsolatedTrajs+1;
+    end
+end
+
+outStr="";
+for i=1:size(averageColorAverageDistance,1)
+    if i==size(averageColorAverageDistance,1)
+        outStr=strcat(outStr,num2str(averageColorAverageDistance(i,1)));
+    else
+        outStr=strcat(outStr,num2str(averageColorAverageDistance(i,1)),", ");
+    end
+
+end
+numTrajs=0;
+for i=1:size(allTrajs,1)
+    for j=1:size(allTrajs,2)
+        numTrajs=numTrajs+size(allTrajs{i,j},1);
+    end
+end
+disp(["Total number of cars: ",num2str(numTrajs)])
+disp(["numIsolatedTrajs: ",num2str(numIsolatedTrajs)])
+disp(["averageMinDistColor: ",outStr])
+allAvgIsolatedTimePercentages=0;
+counter=0;
+totalProtected=0;
+for i=1:size(numIsolatedTrajIndices,1)
+    if numTrajJumps(i,1)>0
+        isolatedTimePercentage=numIsolatedTrajIndices(i,1)/numTrajJumps(i,1);
+        if isolatedTimePercentage>protectionTimePercentage
+            totalProtected=totalProtected+1;
+        end
+        allAvgIsolatedTimePercentages=allAvgIsolatedTimePercentages+isolatedTimePercentage;
+        counter=counter+1;
+    end
+end
+disp(["avg Time isolated: ",num2str(allAvgIsolatedTimePercentages/counter)])
+
 end
 
 function drawBaseMap(uTraj,rawTrajsDebug)
@@ -335,6 +476,13 @@ for i=2:size(rawTrajsDebug,1)
         trajLatNext=rawTrajsDebug{i-1,2};
         trajLonNext=rawTrajsDebug{i-1,3};
         line([trajLon,trajLonNext],[trajLat,trajLatNext],'color',[0.0,0,0.0],'LineWidth',4)
+    else
+        trajLat=rawTrajsDebug{i,2};
+        trajLon=rawTrajsDebug{i,3};
+        trajLatNext=rawTrajsDebug{i-1,2};
+        trajLonNext=rawTrajsDebug{i-1,3};
+        scatter(trajLon,trajLat,250,"white","filled",'Marker','diamond','MarkerEdgeColor','black')
+        scatter(trajLonNext,trajLatNext,250,"white","filled",'Marker','square','MarkerEdgeColor','black')
     end
 end
 end

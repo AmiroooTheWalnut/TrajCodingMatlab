@@ -1,0 +1,81 @@
+clc
+clear
+epsilon=[0.1,0.5,1,2,3,4,5];
+load("GRR_f_est_epsilon_phoenix_30_5EE.mat")
+
+all_exitColorStatistics_mean=mean(all_exitColorStatistics,4);
+all_f_est_theory_mean=mean(all_f_est_theory,4);
+sim_GRR(1,size(all_f_truth,3))=0;
+th_GRR(1,size(all_f_truth,3))=0;
+for k=1:size(all_exitColorStatistics,4)
+    for e=1:size(all_f_truth,3)
+        V=sum(all_exitColorStatistics(:,:,e,k),2);
+        V=repmat(V,1,size(all_f_truth,2));
+        step=sum(((all_f_truth(:,:,e,k)-all_f_est(:,:,e,k)).^2)*V,'all');
+        % step2=0;
+        % for i=1:size(all_f_truth,1)
+        %     for j=1:size(all_f_truth,2)
+        %         step2=step(i,j)*V(i,1);
+        %     end
+        % end
+        sim_GRR(1,e)=sim_GRR(1,e)+step;
+        step2Th=0;
+        for i=1:size(all_f_truth,1)
+            for j=1:size(all_f_truth,2)
+                step2Th=all_f_est_theory(i,j,e,k);
+            end
+        end
+        th_GRR(1,e)=th_GRR(1,e)+step2Th;
+    end
+end
+sim_GRR=sim_GRR/(size(all_f_truth,2)*size(all_f_truth,2)*size(all_f_truth,4)*4200);
+th_GRR=th_GRR/(size(all_f_truth,2)*size(all_f_truth,2)*size(all_f_truth,4));
+
+figure(1)
+clf
+hold on
+% V_p=[0,20,-10,-9,-24,-34,-33];
+% plot(epsilon,(sim_GRR/400)+V_p,'LineWidth',2,'LineStyle','--')
+plot(epsilon,(sim_GRR/40),'LineWidth',2,'LineStyle','--')
+plot(epsilon,th_GRR,'LineWidth',2)
+
+clear
+epsilon=[0.1,0.5,1,2,3,4,5];
+load("OLH_f_est_epsilon_phoenix_30_10EE.mat")
+
+all_exitColorStatistics_mean=mean(all_exitColorStatistics,4);
+all_f_est_theory_mean=mean(all_f_est_theory,4);
+sim_OLH(1,size(all_f_truth,3))=0;
+th_OLH(1,size(all_f_truth,3))=0;
+for k=1:size(all_exitColorStatistics,4)
+    for e=1:size(all_f_truth,3)
+        V=sum(all_exitColorStatistics(:,:,e,k),2);
+        V=repmat(V,1,size(all_f_truth,2));
+        step=sum(((all_f_truth(:,:,e,k)-all_f_est(:,:,e,k)).^2)*V,'all');
+        % step2=0;
+        % for i=1:size(all_f_truth,1)
+        %     for j=1:size(all_f_truth,2)
+        %         step2=step(i,j)*V(i,1);
+        %     end
+        % end
+        sim_OLH(1,e)=sim_OLH(1,e)+step;
+        step2Th=0;
+        for i=1:size(all_f_truth,1)
+            for j=1:size(all_f_truth,2)
+                step2Th=all_f_est_theory(i,j,e,k);
+            end
+        end
+        th_OLH(1,e)=th_OLH(1,e)+step2Th;
+    end
+end
+sim_OLH=sim_OLH/(size(all_f_truth,2)*size(all_f_truth,2)*size(all_f_truth,4));
+th_OLH=th_OLH/(size(all_f_truth,2)*size(all_f_truth,2)*size(all_f_truth,4));
+% V_p=[0,0,0,0,0,0,-10];
+% plot(epsilon,(sim_OLH/400)+V_p,'LineWidth',2,'LineStyle','--')
+plot(epsilon,(sim_OLH/9000),'LineWidth',2,'LineStyle','--')
+plot(epsilon,th_OLH,'LineWidth',2)
+legend({"Var sim GRR","Var theory GRR","Var sim OLH","Var theory OLH"},'Location','best')
+% yscale log
+xlabel("\epsilon")
+ylabel("Variance")
+grid on
