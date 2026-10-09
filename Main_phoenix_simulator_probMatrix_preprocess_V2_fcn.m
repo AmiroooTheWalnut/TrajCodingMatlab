@@ -1,305 +1,45 @@
-clc
-clear
-forceRecalcCheckPoint=false;
+function [totalCars,totalProtected,numIsolatedTrajs,avgIsolatedTimePercentages,f_est,f_est_theory,f_truth,entryExitStatistics]=Main_phoenix_simulator_probMatrix_preprocess_V2_fcn(protectionDistance,protectionTimePercentage,epsilon,dropChance,forceRecalcCheckPoint,dataName,dataNameDebug,saveName)
+%using the inverse
+totalCars=-1;
+totalProtected=-1;
+numIsolatedTrajs=-1;
+avgIsolatedTimePercentages=-1;
+% forceRecalcCheckPoint=false;
 isVisualize=0;
-protectionTimePercentage=0.5;
-epsilon=10;%color selection mixture
+numGrid=5;
+% protectionTimePercentage=0.5;
+% epsilon=2;%color selection mixture
 simStartEndOffset=2500;
-protectionDistance=150;
+% protectionDistance=150;
+% dropChance=0.9;
 downtownImg = imread("PhoenixMap.png");
 downtownImg = imrotate(downtownImg,180);
 downtownImg = flip(downtownImg,2);
 downtownImg = im2double(downtownImg);
 isfijOnly=true;
-if isfile("phoenix_checkpoint.mat")==0 || forceRecalcCheckPoint==true
-    opts = detectImportOptions('trajPhoenixNorthWest_tiny.csv');
-    opts = setvartype(opts, 5, 'string');
-    rawTrajs = readtable('trajPhoenixNorthWest_tiny.csv',opts);
-
-    opts = detectImportOptions('trajPhoenixNorthWest_tiny_debug.csv');
-    opts = setvartype(opts, 4, 'string');
-    rawTrajsDebug = readtable('trajPhoenixNorthWest_tiny_debug.csv',opts);
-
-    trajMatDebug=table2array([rawTrajsDebug(:,2),rawTrajsDebug(:,3)]);
-    uTraj=unique(trajMatDebug,'rows');
-
-    minX=min(uTraj(:,2));
-    maxX=max(uTraj(:,2));
-    minY=min(uTraj(:,1));
-    maxY=max(uTraj(:,1));
-    marginValue=0.02;
-    minXTemp=minX-(maxX-minX)*marginValue;
-    maxXTemp=maxX+(maxX-minX)*marginValue;
-    minYTemp=minY-(maxY-minY)*marginValue;
-    maxYTemp=maxY+(maxY-minY)*marginValue;
-    minX=minXTemp;
-    maxX=maxXTemp;
-    minY=minYTemp;
-    maxY=maxYTemp;
-    numGrid=5;
-    width=(maxX-minX)/numGrid;
-    height=(maxY-minY)/numGrid;
-
-    if isVisualize==1
-        figure(1)
-        clf
-        hold on
-        imagesc([-112.2737 -111.874], [33.431 33.688], downtownImg);
-        drawBaseMap(uTraj,rawTrajsDebug,150);
-        % figure(2)
-        % clf
-    end
-    numEntry=20;
-    numExit=20;
-    allTrajs=cell(numEntry,numExit);
-    allTrajTimesteps=cell(numEntry,numExit);
-
-
-    %
-    % STATE -2 MEANS THAT TRAJECTORY HAS NOT STARTED TO SIMULATE
-    % STATE -1 MEANS THAT TRAJECTORY SIMULATION HAS FINISHED
-    % STATE >=1 MEANS THAT TRAJECTORY IS SIMULATING REPRESENTING THE LAST
-    %   ACTIVE INDEX IN THE TRAJECTORY
-    % SECOND COLUMN IS THE INDEX OF TRAJECOTRY
-    allTrajStates=cell(numEntry,numExit);
-
-    %
-    % THE INDEX OF THE COLOR IS STORED. THE COLOR IS EXTRACTED BY USING THE
-    % "entryColor" VARIABLE
-    %
-    simTrajColors=cell(numEntry,numExit);
-    for i=1:numEntry
-        for j=1:numExit
-            allTrajs{i,j}=cell(0,1);
-            simTrajColors{i,j}=cell(0,1);
-            allTrajStates{i,j}=cell(0,1);
-            allTrajTimesteps{i,j}=cell(0,1);
-        end
-    end
-
-    entryLatLon(numEntry,2)=0;
-    exitLatLon(numEntry,2)=0;
-    isFirst=1;
-    lastEE='';
-    for m=1:size(rawTrajsDebug,1)
-        splitVals=split(rawTrajsDebug{m,1}{1,1},'_');
-        entryVal=str2num(splitVals{1,1});
-        exitVal=str2num(splitVals{2,1});
-        if isFirst==1
-            entryLatLon(entryVal+1,:)=[rawTrajsDebug{m,2},rawTrajsDebug{m,3}];
-            isFirst=0;
-            lastEE=rawTrajsDebug{m,1}{1,1};
-        else
-            if strcmp(rawTrajsDebug{m,1}{1,1},lastEE)==0
-                splitVals=split(rawTrajsDebug{m-1,1}{1,1},'_');
-                % entryValPrev=str2num(splitVals{1,1});
-                exitValPrev=str2num(splitVals{2,1});
-                exitLatLon(exitValPrev+1,:)=[rawTrajsDebug{m-1,2},rawTrajsDebug{m-1,3}];
-                entryLatLon(entryVal+1,:)=[rawTrajsDebug{m,2},rawTrajsDebug{m,3}];
-                isFirst=0;
-                lastEE=rawTrajsDebug{m,1}{1,1};
-            end
-        end
-    end
-
-    isStartFound=0;
-    prevTraj=-1;
-    rejectingTraj=-1;
-    for i=1:size(rawTrajs,1)
-    % for i=1:10000
-        if mod(i,10000)==0
-            disp(i)
-        end
-        %     if i==302
-        %         disp('!!!')
-        %     end
-        if isStartFound==1
-            if prevTraj~=rawTrajs{i,1}
-                isStartFound=0;
-            end
-        end
-        vals=split(rawTrajs{i,2}{1,1},'_');
-        if isStartFound==0
-            if rejectingTraj==rawTrajs{i,1}
-                continue
-            end
-            if rand(1,1)<-0.9
-                rejectingTraj=rawTrajs{i,1};
-                continue
-            end
-            if exist("buildingTrajs","var")==1
-                allTrajs{inInd+1,outInd+1}{size(allTrajs{inInd+1,outInd+1},1)+1,1}=buildingTrajs;
-                allTrajTimesteps{inInd+1,outInd+1}{size(allTrajTimesteps{inInd+1,outInd+1},1)+1,1}=buildingTimes;
-            end
-        end
-        
-        inInd=str2num(vals{1,1});
-        outInd=str2num(vals{2,1});
-        if isStartFound==0
-            buildingTrajs=[];
-            buildingTimes=cell(0,1);
-            %         pause(2)
-            %         figure(1)
-            %         clf
-            %         hold on
-            trajStartLat=rawTrajs{i,3};
-            trajStartLon=rawTrajs{i,4};
-            % scatter(trajStartLon,trajStartLat,75,[0,0,1],'filled')
-            isStartFound=1;
-            prevTraj=rawTrajs{i,1};
-            if i~=1 && i~=size(rawTrajs,1)
-                trajEndLat=rawTrajs{i-1,3};
-                trajEndLon=rawTrajs{i-1,4};
-                % scatter(trajEndLon,trajEndLat,75,[1,0,0],'filled')
-            end
-            if i==size(rawTrajs,1)
-                trajEndLat=rawTrajs{i-1,3};
-                trajEndLon=rawTrajs{i-1,4};
-                % scatter(trajEndLon,trajEndLat,75,[1,0,0],'filled')
-            end
-            buildingTrajs(size(buildingTrajs,1)+1,1)=trajStartLat;
-            buildingTrajs(size(buildingTrajs,1),2)=trajStartLon;
-            try
-                d=datetime(rawTrajs{i,5},"InputFormat","yyyy-MM-dd'T'HH:mm:ss");
-            catch
-                try
-                    d=datetime(rawTrajs{i,5},"InputFormat","yyyy-MM-dd'T'HH:mm");
-                catch exception
-                    rethrow(exception)
-                end
-            end
-            buildingTimes{size(buildingTimes,1)+1,1}=d;
-        else
-            trajLat=rawTrajs{i,3};
-            trajLon=rawTrajs{i,4};
-            buildingTrajs(size(buildingTrajs,1)+1,1)=trajLat;
-            buildingTrajs(size(buildingTrajs,1),2)=trajLon;
-            try
-                d=datetime(rawTrajs{i,5},"InputFormat","yyyy-MM-dd'T'HH:mm:ss");
-            catch
-                try
-                    d=datetime(rawTrajs{i,5},"InputFormat","yyyy-MM-dd'T'HH:mm");
-                catch exception
-                    rethrow(exception)
-                end
-            end
-            buildingTimes{size(buildingTimes,1)+1,1}=d;
-            if i~=size(rawTrajs,1)
-                trajLatNext=rawTrajs{i-1,3};
-                trajLonNext=rawTrajs{i-1,4};
-                % line([trajLon,trajLonNext],[trajLat,trajLatNext],'color',[0.2,1,0.2],'LineWidth',4)
-            end
-            % scatter(trajLon,trajLat,30,[0.8,1,0],'filled')
-        end
-        % pause(0.02)
-    end
-    allTrajs{inInd+1,outInd+1}{size(allTrajs{inInd+1,outInd+1},1)+1,1}=buildingTrajs;
-    allTrajTimesteps{inInd+1,outInd+1}{size(allTrajTimesteps{inInd+1,outInd+1},1)+1,1}=buildingTimes;
-    for i=1:size(allTrajs,1)
-        for j=1:size(allTrajs,2)
-            allTrajStates{i,j}=zeros([size(allTrajs{i,j},1),1])-2;
-            simTrajColors{i,j}=zeros([size(allTrajs{i,j},1),1]);
-        end
-    end
-    idCounter=1;
-    for m=1:size(allTrajStates,1)
-        for n=1:size(allTrajStates,2)
-            for o=1:size(allTrajStates{m,n},1)
-                allTrajStates{m,n}(o,2)=idCounter;
-                idCounter=idCounter+1;
-            end
-        end
-    end
-
-    % ROW IS TRAJ ID, VALUE IS NUMBER OF REPEATS
-    numIsolatedTrajIndices(idCounter-1,1)=0;
-    numTrajJumps(idCounter-1,1)=0;
-
-    % FINISHED PREPROCESSING ALL TRAJECTORIES, READY TO START SIMULATION
-    % FIND EARLIEST TIME
-    simulationTime=allTrajTimesteps{1,1}{1,1}{1,1};
-    for i=1:size(allTrajTimesteps,1)
-        for j=1:size(allTrajTimesteps,2)
-            for k=1:size(allTrajTimesteps{i,j},1)
-                if allTrajTimesteps{i,j}{k,1}{1,1}<simulationTime
-                    simulationTime=allTrajTimesteps{i,j}{k,1}{1,1};
-                end
-            end
-        end
-    end
-    % FIND LAST TIME
-    endTime=allTrajTimesteps{1,1}{1,1}{1,1};
-    for i=1:size(allTrajTimesteps,1)
-        for j=1:size(allTrajTimesteps,2)
-            for k=1:size(allTrajTimesteps{i,j},1)
-                lastIndex=size(allTrajTimesteps{i,j}{k,1},1);
-                if allTrajTimesteps{i,j}{k,1}{lastIndex,1}>endTime
-                    endTime=allTrajTimesteps{i,j}{k,1}{lastIndex,1};
-                end
-            end
-        end
-    end
-    disp("!")
-    % ASSIGN COLOR TO ENTRIES
-    entryColor=cell(numEntry,1);
-    counter=1;
-    for i=1:numEntry
-        temp(numEntry,3)=0;
-        counterInternal=1;
-        for j=0:1/(numEntry):1-1/(numEntry)
-            temp(counterInternal,:)=hsv2rgb([j,1,1]);
-            counterInternal=counterInternal+1;
-        end
-        entryColor{counter,1}=temp;
-        counter=counter+1;
-        temp=[];
-    end
-    % for i=0:1/(numEntry):1-1/(numEntry)
-    %     entryColor{counter,1}=hsv2rgb([i,1,1]);
-    %     counter=counter+1;
-    % end
-
-    % entryColor{1,1}=[1,0,0;0,1,0;0,0,1;1,0,1];
-    % entryColor{2,1}=[1,0,0;0,1,0;0,0,1;1,0,1];
-    % entryColor{3,1}=[1,0,0;0,1,0;0,0,1;1,0,1];
-    % entryColor{4,1}=[1,0,0;0,1,0;0,0,1;1,0,1];
-
-    entryColorCodes(numEntry,numEntry)=0;
-    allColors=[];
-    for i=1:size(entryColor,1)
-        for j=1:size(entryColor{i,1},1)
-            allColors(size(allColors,1)+1,:)=entryColor{i,1}(j,:);
-        end
-    end
-    uniqueColors=unique(allColors,'rows');
-    numColors=size(uniqueColors,1);
-    averageColorAverageDistance(numColors,1)=0;
-    sumColorMinDistance(numColors,1)=0;
-    averageUncoveredTime(numColors,1)=0;
-    sumUncoveredTime(numColors,1)=0;
-    effectiveSimDuration=0;
-    for i=1:size(entryColor,1)
-        for j=1:size(entryColor{i,1},1)
-            for k=1:size(uniqueColors,1)
-                if uniqueColors(k,:)==entryColor{i,1}(j,:)
-                    entryColorCodes(i,j)=k;
-                end
-            end
-        end
-    end
-
-    duration=seconds(endTime-simulationTime);
-    % START SIMULATION
-    globalMinSameColor(numGrid,numGrid)=0;
-    globalMinDiffColor(numGrid,numGrid)=0;
-    currentTime=simulationTime;
-    rawCounter=1;
-    rectangleHandles(numGrid,numGrid)=0;
-    isVisSimActive=0;
-    save("phoenix_checkpoint.mat",'-regexp', '^(?!isVisualize$|protectionTimePercentage$|epsilon$|simStartEndOffset$|protectionDistance$|downtownImg$).*')
+if isfile(saveName)==0 || forceRecalcCheckPoint==true
+    % saveName='phoenix_checkpoint.mat';
+    % dataName='trajPhoenixNorthWest_tiny.csv';
+    % dataNameDebug='trajPhoenixNorthWest_tiny_debug.csv';
+    disp('Start preprocessing')
+    [width,height,uniqueColors,numColors,simDuration,numEntry,numExit,simulationTime,entryColor,allTrajStates,allTrajTimesteps,entryColorCodes,allTrajs,minX,maxX,minY,maxY,exitLatLon,numIsolatedTrajIndices,numTrajJumps]=preprocessTrajs_fcn(dataName,dataNameDebug,saveName,dropChance,isVisualize,numGrid);
+    disp('End preprocessing')
 else
-    load("phoenix_checkpoint.mat")
+    load(saveName)
 end
+averageColorAverageDistance(numColors,1)=0;
+sumColorMinDistance(numColors,1)=0;
+averageUncoveredTime(numColors,1)=0;
+sumUncoveredTime(numColors,1)=0;
+effectiveSimDuration=0;
+
+% START SIMULATION
+globalMinSameColor(numGrid,numGrid)=0;
+globalMinDiffColor(numGrid,numGrid)=0;
+currentTime=simulationTime;
+rawCounter=1;
+rectangleHandles(numGrid,numGrid)=0;
+isVisSimActive=0;
 entryColorProb(numEntry,numExit)=0;
 cumEntryColorProb(numEntry,numExit)=0;
 for i=1:numEntry
@@ -318,7 +58,6 @@ for i=1:numEntry
 end
 if isfijOnly==true
     entryExitStatistics(numEntry,numExit)=0;
-    exitColorStatistics(numExit,size(entryColor,1))=0;
     for m=1:size(allTrajs,1)
         for n=1:size(allTrajs,2)
             for o=1:size(allTrajs{m,n},1)
@@ -331,8 +70,6 @@ if isfijOnly==true
                     end
                 end
                 colorIndex=entryColorCodes(m,selectedIndex);
-                % colorIndex=simTrajColors{m,n}(o,1);
-                exitColorStatistics(n,colorIndex)=exitColorStatistics(n,colorIndex)+1;
 
                 for u=1:size(entryColorCodes(n,:),2)
                     selectedEntry=-1;
@@ -353,27 +90,6 @@ if isfijOnly==true
             f_ij_true(i,j)=f_ij_true(i,j)+size(allTrajs{i,j},1);
         end
     end
-    N(numEntry,numExit)=0;%It is supposed to be number of cars from entry i that is repeated on columns
-    for i=1:size(allTrajs,1)
-        mySum=0;
-        for j=1:size(allTrajs,2)
-            mySum=mySum+size(allTrajs{i,j},1);
-        end
-        for j=1:size(allTrajs,2)
-            N(i,j)=mySum;
-        end
-    end
-    D=N.*entryColorProb;
-    f_est_V2(numEntry,numExit)=0;
-    organizedExitColorStatistics(numEntry,numEntry)=0;
-    for j=1:size(entryColorCodes,2)
-        organizedExitColorStatistics(entryColorCodes(1,j),:)=exitColorStatistics(j,:);
-    end
-    for j=1:size(allTrajs,2)
-        M=organizedExitColorStatistics(j,:);
-        f_est_V2_column=M*pinv(D);
-        f_est_V2(:,j)=f_est_V2_column';
-    end
     Z=entryExitStatistics;
     V=sum(entryExitStatistics,2);
     q=1/(exp(epsilon)+numEntry-1);
@@ -386,7 +102,7 @@ if isfijOnly==true
 else
     exitColorStatistics(numExit,size(entryColor,1))=0;
     entryExitStatistics(numEntry,numExit)=0;
-    for i=1:duration
+    for i=1:simDuration
         % INSIDE EACH CELL (Nx3), FIRST LAT SECOND LON THIRD TRAJ INDEX
         allColorLocations=cell(numColors,1);
         localColors=cell(numGrid,numGrid);
@@ -525,7 +241,7 @@ else
         % figure(2)
         % clf
         % [minSameColor,minDiffColor]=gridAnonimity(numGrid,minX-(maxX-minX)*0.01,minY-(maxY-minY)*0.01,maxX+(maxX-minX)*0.01,maxY+(maxY-minY)*0.01);
-        if rawCounter>simStartEndOffset && rawCounter<duration-simStartEndOffset
+        if rawCounter>simStartEndOffset && rawCounter<simDuration-simStartEndOffset
             isVisSimActive=1;
             for c=1:size(allColorLocations,1)
                 minDist=10000;
@@ -653,21 +369,6 @@ else
             f_ij_true(i,j)=f_ij_true(i,j)+size(allTrajs{i,j},1);
         end
     end
-    N(numEntry,numExit)=0;%It is supposed to be number of cars from entry i that is repeated on columns
-    for i=1:size(allTrajs,1)
-        mySum=0;
-        for j=1:size(allTrajs,2)
-            mySum=mySum+size(allTrajs{i,j},1);
-        end
-        for j=1:size(allTrajs,2)
-            N(i,j)=mySum;
-        end
-    end
-    D=N.*entryColorProb;
-    for j=1:size(allTrajs,2)
-        M=exitColorStatistics(j,:)';
-        f_est_V2_column=M*pinv(D);
-    end
     Z=entryExitStatistics;
     V=sum(entryExitStatistics,2);
     q=1/(exp(epsilon)+numEntry-1);
@@ -676,6 +377,7 @@ else
     n=numEntry;%num colors
     f_est_theory=V*((exp(epsilon)+n-2)/((exp(epsilon)-1)^2))+f_ij_true*((n-2)/(exp(epsilon)-1));
     f_truth=f_ij_true;
+end
 end
 
 

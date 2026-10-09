@@ -1,6 +1,6 @@
 clc
 clear
-forceRecalcCheckPoint=false;
+forceRecalcCheckPoint=true;
 isVisualize=0;
 protectionTimePercentage=0.5;
 epsilon=10;%color selection mixture
@@ -10,14 +10,14 @@ downtownImg = imread("PhoenixMap.png");
 downtownImg = imrotate(downtownImg,180);
 downtownImg = flip(downtownImg,2);
 downtownImg = im2double(downtownImg);
-if isfile("phoenix_checkpoint.mat")==0 || forceRecalcCheckPoint==true
-    opts = detectImportOptions('trajPhoenixNorthWest_random.csv');
+if isfile("phoenix_checkpoint_hash_test.mat")==0 || forceRecalcCheckPoint==true
+    opts = detectImportOptions('trajPhoenixNorthWest_20E.csv');
     opts = setvartype(opts, 5, 'string');
-    rawTrajs = readtable('trajPhoenixNorthWest_random.csv',opts);
+    rawTrajs = readtable('trajPhoenixNorthWest_20E.csv',opts);
 
-    opts = detectImportOptions('trajPhoenixNorthWest_random_debug.csv');
+    opts = detectImportOptions('trajPhoenixNorthWest_20E_debug.csv');
     opts = setvartype(opts, 4, 'string');
-    rawTrajsDebug = readtable('trajPhoenixNorthWest_random_debug.csv',opts);
+    rawTrajsDebug = readtable('trajPhoenixNorthWest_20E_debug.csv',opts);
 
     trajMatDebug=table2array([rawTrajsDebug(:,2),rawTrajsDebug(:,3)]);
     uTraj=unique(trajMatDebug,'rows');
@@ -286,7 +286,7 @@ if isfile("phoenix_checkpoint.mat")==0 || forceRecalcCheckPoint==true
     rawCounter=1;
     rectangleHandles(numGrid,numGrid)=0;
     isVisSimActive=0;
-    save("phoenix_checkpoint.mat",'-regexp', '^(?!isVisualize$|protectionTimePercentage$|epsilon$|simStartEndOffset$|protectionDistance$|downtownImg$).*')
+    save("phoenix_checkpoint_hash_test.mat",'-regexp', '^(?!isVisualize$|protectionTimePercentage$|epsilon$|simStartEndOffset$|protectionDistance$|downtownImg$).*')
 else
     load("phoenix_checkpoint.mat")
 end
@@ -299,23 +299,24 @@ if isVisualize==1
     % figure(2)
     % clf
 end
-% entryColorProb(numEntry,numExit)=0;
-% cumEntryColorProb(numEntry,numExit)=0;
-% for i=1:numEntry
-%     for j=1:numEntry
-%         if i==j
-%             entryColorProb(i,j)=exp(epsilon)/(exp(epsilon)+numEntry-1);
-%         else
-%             entryColorProb(i,j)=1/(exp(epsilon)+numEntry-1);
-%         end
-%         if j==1
-%             cumEntryColorProb(i,j)=entryColorProb(i,j);
-%         elseif j>1
-%             cumEntryColorProb(i,j)=cumEntryColorProb(i,j-1)+entryColorProb(i,j);
-%         end
-%     end
-% end
+entryColorProb(numEntry,numExit)=0;
+cumEntryColorProb(numEntry,numExit)=0;
+for i=1:numEntry
+    for j=1:numEntry
+        if i==j
+            entryColorProb(i,j)=exp(epsilon)/(exp(epsilon)+numEntry-1);
+        else
+            entryColorProb(i,j)=1/(exp(epsilon)+numEntry-1);
+        end
+        if j==1
+            cumEntryColorProb(i,j)=entryColorProb(i,j);
+        elseif j>1
+            cumEntryColorProb(i,j)=cumEntryColorProb(i,j-1)+entryColorProb(i,j);
+        end
+    end
+end
 exitColorStatistics(numExit,size(entryColor,1))=0;
+entryExitStatistics(numEntry,numExit)=0;
 for i=1:duration
     % INSIDE EACH CELL (Nx3), FIRST LAT SECOND LON THIRD TRAJ INDEX
     allColorLocations=cell(numColors,1);
@@ -347,9 +348,18 @@ for i=1:duration
                         s=numEntry;
                         a=randi(p);
                         b=randi(p);
-                        selectedIndex=mod(mod(a*m+b,p),s)+1;
-                        colorIndex=entryColorCodes(m,selectedIndex);
-                        simTrajColors{m,n}(o,1)=colorIndices(colorIndex,1);
+                        selectedRow=mod(mod(a*m+b,p),s)+1;
+                        % val=rand(1,1);
+                        % selectedIndex=1;
+                        % for q=1:numEntry
+                        %     if val<cumEntryColorProb(selectedRow,q)% m is entry q is color index
+                        %         selectedIndex=q;
+                        %         break;
+                        %     end
+                        % end
+                        % colorIndex=entryColorCodes(m,selectedIndex);
+                        colorIndex=entryColorCodes(m,selectedRow);
+                        simTrajColors{m,n}(o,1)=colorIndex;
                     end
                 elseif allTrajStates{m,n}(o,1)>0
                     lastIndex=size(allTrajTimesteps{m,n}{o,1},1);
@@ -362,6 +372,14 @@ for i=1:duration
                             if exitLatLon(k,1)==endPoint(1,1) && exitLatLon(k,2)==endPoint(1,2)
                                 colorIndex=simTrajColors{m,n}(o,1);
                                 exitColorStatistics(k,colorIndex)=exitColorStatistics(k,colorIndex)+1;
+                                for u=1:size(entryColorCodes(k,:),2)
+                                    selectedEntry=-1;
+                                    if entryColorCodes(k,u)==colorIndex
+                                        selectedEntry=u;
+                                        break
+                                    end
+                                end
+                                entryExitStatistics(selectedEntry,k)=entryExitStatistics(selectedEntry,k)+1;
                                 break
                             end
                         end
@@ -578,8 +596,8 @@ for i=1:size(allTrajs,1)
         f_ij_true(i,j)=f_ij_true(i,j)+size(allTrajs{i,j},1);
     end
 end
-Z=exitColorStatistics';
-V=sum(exitColorStatistics,2);
+Z=entryExitStatistics';
+V=sum(entryExitStatistics,2);
 g=exp(epsilon)+1;
 q_star=1/(g);
 p_star=exp(epsilon)/(exp(epsilon)+g-1);

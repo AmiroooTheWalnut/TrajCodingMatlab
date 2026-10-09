@@ -3,7 +3,7 @@ clear
 forceRecalcCheckPoint=false;
 isVisualize=0;
 protectionTimePercentage=0.5;
-epsilon=10;%color selection mixture
+epsilon=2;%color selection mixture
 simStartEndOffset=2500;
 protectionDistance=150;
 downtownImg = imread("PhoenixMap.png");
@@ -365,12 +365,9 @@ if isfijOnly==true
     end
     D=N.*entryColorProb;
     f_est_V2(numEntry,numExit)=0;
-    organizedExitColorStatistics(numEntry,numEntry)=0;
-    for j=1:size(entryColorCodes,2)
-        organizedExitColorStatistics(entryColorCodes(1,j),:)=exitColorStatistics(j,:);
-    end
+    organizedExitColorStatistics(numEntry,num)=0;
     for j=1:size(allTrajs,2)
-        M=organizedExitColorStatistics(j,:);
+        M=exitColorStatistics(j,:);
         f_est_V2_column=M*pinv(D);
         f_est_V2(:,j)=f_est_V2_column';
     end
