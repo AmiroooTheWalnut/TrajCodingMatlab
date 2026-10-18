@@ -3,7 +3,7 @@ clear
 forceRecalcCheckPoint=false;
 isVisualize=0;
 protectionTimePercentage=0.5;
-epsilon=10;%color selection mixture
+epsilon=5;%color selection mixture
 simStartEndOffset=2500;
 protectionDistance=150;
 downtownImg = imread("PhoenixMap.png");
@@ -12,13 +12,13 @@ downtownImg = flip(downtownImg,2);
 downtownImg = im2double(downtownImg);
 isfijOnly=true;
 if isfile("phoenix_checkpoint.mat")==0 || forceRecalcCheckPoint==true
-    opts = detectImportOptions('trajPhoenixNorthWest_tiny.csv');
+    opts = detectImportOptions('trajPhoenixNorthWest_20E.csv');
     opts = setvartype(opts, 5, 'string');
-    rawTrajs = readtable('trajPhoenixNorthWest_tiny.csv',opts);
+    rawTrajs = readtable('trajPhoenixNorthWest_20E.csv',opts);
 
-    opts = detectImportOptions('trajPhoenixNorthWest_tiny_debug.csv');
+    opts = detectImportOptions('trajPhoenixNorthWest_20E_debug.csv');
     opts = setvartype(opts, 4, 'string');
-    rawTrajsDebug = readtable('trajPhoenixNorthWest_tiny_debug.csv',opts);
+    rawTrajsDebug = readtable('trajPhoenixNorthWest_20E_debug.csv',opts);
 
     trajMatDebug=table2array([rawTrajsDebug(:,2),rawTrajsDebug(:,3)]);
     uTraj=unique(trajMatDebug,'rows');
@@ -302,6 +302,7 @@ else
 end
 entryColorProb(numEntry,numExit)=0;
 cumEntryColorProb(numEntry,numExit)=0;
+% entryColorProb=eye(numEntry,numExit);%DEBUGGING!
 for i=1:numEntry
     for j=1:numEntry
         if i==j
@@ -367,7 +368,7 @@ if isfijOnly==true
     f_est_V2(numEntry,numExit)=0;
     organizedExitColorStatistics(numEntry,numEntry)=0;
     for j=1:size(entryColorCodes,2)
-        organizedExitColorStatistics(entryColorCodes(1,j),:)=exitColorStatistics(j,:);
+        organizedExitColorStatistics(:,j)=exitColorStatistics(:,entryColorCodes(1,j));
     end
     for j=1:size(allTrajs,2)
         M=organizedExitColorStatistics(j,:);

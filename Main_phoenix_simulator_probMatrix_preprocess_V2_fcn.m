@@ -57,7 +57,9 @@ for i=1:numEntry
     end
 end
 if isfijOnly==true
+    tic;
     entryExitStatistics(numEntry,numExit)=0;
+    exitColorStatistics(numExit,size(entryColor,1))=0;
     for m=1:size(allTrajs,1)
         for n=1:size(allTrajs,2)
             for o=1:size(allTrajs{m,n},1)
@@ -70,6 +72,8 @@ if isfijOnly==true
                     end
                 end
                 colorIndex=entryColorCodes(m,selectedIndex);
+                % colorIndex=simTrajColors{m,n}(o,1);
+                exitColorStatistics(n,colorIndex)=exitColorStatistics(n,colorIndex)+1;
 
                 for u=1:size(entryColorCodes(n,:),2)
                     selectedEntry=-1;
@@ -90,6 +94,27 @@ if isfijOnly==true
             f_ij_true(i,j)=f_ij_true(i,j)+size(allTrajs{i,j},1);
         end
     end
+    N(numEntry,numExit)=0;%It is supposed to be number of cars from entry i that is repeated on columns
+    for i=1:size(allTrajs,1)
+        mySum=0;
+        for j=1:size(allTrajs,2)
+            mySum=mySum+size(allTrajs{i,j},1);
+        end
+        for j=1:size(allTrajs,2)
+            N(i,j)=mySum;
+        end
+    end
+    D=N.*entryColorProb;
+    f_est_V2(numEntry,numExit)=0;
+    organizedExitColorStatistics(numEntry,numEntry)=0;
+    for j=1:size(entryColorCodes,2)
+        organizedExitColorStatistics(:,j)=exitColorStatistics(:,entryColorCodes(1,j));
+    end
+    for j=1:size(allTrajs,2)
+        M=organizedExitColorStatistics(j,:);
+        f_est_V2_column=M*pinv(D);
+        f_est_V2(:,j)=f_est_V2_column';
+    end
     Z=entryExitStatistics;
     V=sum(entryExitStatistics,2);
     q=1/(exp(epsilon)+numEntry-1);
@@ -98,7 +123,9 @@ if isfijOnly==true
     n=numEntry;%num colors
     f_est_theory=V*((exp(epsilon)+n-2)/((exp(epsilon)-1)^2))+f_ij_true*((n-2)/(exp(epsilon)-1));
     f_truth=f_ij_true;
-    disp('!!!!')
+    endTime=toc;
+    disp('Runtime:')
+    disp(endTime)
 else
     exitColorStatistics(numExit,size(entryColor,1))=0;
     entryExitStatistics(numEntry,numExit)=0;
@@ -369,6 +396,27 @@ else
             f_ij_true(i,j)=f_ij_true(i,j)+size(allTrajs{i,j},1);
         end
     end
+    N(numEntry,numExit)=0;%It is supposed to be number of cars from entry i that is repeated on columns
+    for i=1:size(allTrajs,1)
+        mySum=0;
+        for j=1:size(allTrajs,2)
+            mySum=mySum+size(allTrajs{i,j},1);
+        end
+        for j=1:size(allTrajs,2)
+            N(i,j)=mySum;
+        end
+    end
+    D=N.*entryColorProb;
+    f_est_V2(numEntry,numExit)=0;
+    organizedExitColorStatistics(numEntry,numEntry)=0;
+    for j=1:size(entryColorCodes,2)
+        organizedExitColorStatistics(:,j)=exitColorStatistics(:,entryColorCodes(1,j));
+    end
+    for j=1:size(allTrajs,2)
+        M=organizedExitColorStatistics(j,:);
+        f_est_V2_column=M*pinv(D);
+        f_est_V2(:,j)=f_est_V2_column';
+    end
     Z=entryExitStatistics;
     V=sum(entryExitStatistics,2);
     q=1/(exp(epsilon)+numEntry-1);
@@ -376,7 +424,6 @@ else
     f_est=(Z-V*q)/(p-q);
     n=numEntry;%num colors
     f_est_theory=V*((exp(epsilon)+n-2)/((exp(epsilon)-1)^2))+f_ij_true*((n-2)/(exp(epsilon)-1));
-    f_truth=f_ij_true;
 end
 end
 
