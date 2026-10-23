@@ -13,7 +13,9 @@ for k=1:size(all_f_est,4)
 end
 f_hat=f_hat/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_hat(:,:,e)=abs(f_hat(:,:,e))/(sum(sum(abs(f_hat(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_hat(i,:,e)=abs(f_hat(i,:,e))/(sum(abs(f_hat(i,:,e))));
+    end
 end
 f_true_bar(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
@@ -27,7 +29,9 @@ for k=1:size(all_f_est,4)
 end
 f_true_bar=f_true_bar/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_true_bar(:,:,e)=(f_true_bar(:,:,e))/(sum(sum((f_true_bar(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_true_bar(i,:,e)=(f_true_bar(i,:,e))/(sum(((f_true_bar(i,:,e)))));
+    end
 end
 S(1,size(all_f_est,3))=0;
 for e=1:size(all_f_est,3)
@@ -57,7 +61,9 @@ for k=1:size(all_f_est,4)
 end
 f_hat=f_hat/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_hat(:,:,e)=abs(f_hat(:,:,e))/(sum(sum(abs(f_hat(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_hat(i,:,e)=abs(f_hat(i,:,e))/(sum(abs(f_hat(i,:,e))));
+    end
 end
 f_true_bar(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
@@ -71,7 +77,9 @@ for k=1:size(all_f_est,4)
 end
 f_true_bar=f_true_bar/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_true_bar(:,:,e)=(f_true_bar(:,:,e))/(sum(sum((f_true_bar(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_true_bar(i,:,e)=(f_true_bar(i,:,e))/(sum(((f_true_bar(i,:,e)))));
+    end
 end
 S(1,size(all_f_est,3))=0;
 for e=1:size(all_f_est,3)
@@ -98,7 +106,9 @@ for k=1:size(all_f_est,4)
 end
 f_hat=f_hat/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_hat(:,:,e)=abs(f_hat(:,:,e))/(sum(sum(abs(f_hat(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_hat(i,:,e)=abs(f_hat(i,:,e))/(sum(abs(f_hat(i,:,e))));
+    end
 end
 f_true_bar(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
@@ -112,7 +122,9 @@ for k=1:size(all_f_est,4)
 end
 f_true_bar=f_true_bar/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_true_bar(:,:,e)=(f_true_bar(:,:,e))/(sum(sum((f_true_bar(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_true_bar(i,:,e)=(f_true_bar(i,:,e))/(sum(((f_true_bar(i,:,e)))));
+    end
 end
 S(1,size(all_f_est,3))=0;
 for e=1:size(all_f_est,3)
@@ -142,7 +154,9 @@ for k=1:size(all_f_est,4)
 end
 f_hat=f_hat/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_hat(:,:,e)=abs(f_hat(:,:,e))/(sum(sum(abs(f_hat(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_hat(i,:,e)=abs(f_hat(i,:,e))/(sum(abs(f_hat(i,:,e))));
+    end
 end
 f_true_bar(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
@@ -156,7 +170,9 @@ for k=1:size(all_f_est,4)
 end
 f_true_bar=f_true_bar/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_true_bar(:,:,e)=(f_true_bar(:,:,e))/(sum(sum((f_true_bar(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_true_bar(i,:,e)=(f_true_bar(i,:,e))/(sum(((f_true_bar(i,:,e)))));
+    end
 end
 S(1,size(all_f_est,3))=0;
 for e=1:size(all_f_est,3)
@@ -186,7 +202,9 @@ for k=1:size(all_f_est,4)
 end
 f_hat=f_hat/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_hat(:,:,e)=abs(f_hat(:,:,e))/(sum(sum(abs(f_hat(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_hat(i,:,e)=abs(f_hat(i,:,e))/(sum(abs(f_hat(i,:,e))));
+    end
 end
 f_true_bar(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
@@ -200,7 +218,9 @@ for k=1:size(all_f_est,4)
 end
 f_true_bar=f_true_bar/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_true_bar(:,:,e)=(f_true_bar(:,:,e))/(sum(sum((f_true_bar(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_true_bar(i,:,e)=(f_true_bar(i,:,e))/(sum(((f_true_bar(i,:,e)))));
+    end
 end
 S(1,size(all_f_est,3))=0;
 for e=1:size(all_f_est,3)
@@ -227,7 +247,9 @@ for k=1:size(all_f_est,4)
 end
 f_hat=f_hat/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_hat(:,:,e)=abs(f_hat(:,:,e))/(sum(sum(abs(f_hat(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_hat(i,:,e)=abs(f_hat(i,:,e))/(sum(abs(f_hat(i,:,e))));
+    end
 end
 f_true_bar(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
@@ -241,7 +263,9 @@ for k=1:size(all_f_est,4)
 end
 f_true_bar=f_true_bar/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_true_bar(:,:,e)=(f_true_bar(:,:,e))/(sum(sum((f_true_bar(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_true_bar(i,:,e)=(f_true_bar(i,:,e))/(sum(((f_true_bar(i,:,e)))));
+    end
 end
 S(1,size(all_f_est,3))=0;
 for e=1:size(all_f_est,3)

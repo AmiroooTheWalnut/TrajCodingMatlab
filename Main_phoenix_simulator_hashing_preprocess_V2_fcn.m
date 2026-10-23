@@ -5,6 +5,7 @@ numIsolatedTrajs=-1;
 avgIsolatedTimePercentages=-1;
 % forceRecalcCheckPoint=false;
 isVisualize=0;
+numGrid=5;
 % protectionTimePercentage=0.5;
 % epsilon=10;%color selection mixture
 simStartEndOffset=2500;

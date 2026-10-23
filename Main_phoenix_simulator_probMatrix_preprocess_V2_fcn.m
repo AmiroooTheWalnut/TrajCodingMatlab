@@ -342,7 +342,7 @@ else
         end
         currentTime=currentTime+seconds(1);
         rawCounter=rawCounter+1;
-        pause(0.001)
+        % pause(0.001)
     end
     for c=1:size(allColorLocations,1)
         averageColorAverageDistance(c,1)=(sumColorMinDistance(c,1)/effectiveSimDuration)*6.8986113164*22*1609.34;

@@ -40,8 +40,12 @@ if isfile("phoenix_checkpoint_hash_test.mat")==0 || forceRecalcCheckPoint==true
     width=(maxX-minX)/numGrid;
     height=(maxY-minY)/numGrid;
 
-    numEntry=20;
-    numExit=20;
+    % detect number of enteries and exits based on the debug dataset
+    strEE=table2array(rawTrajsDebug(size(rawTrajsDebug,1),1));
+    strEE=strEE{1,1};
+    strEESplit=split(strEE,'_');
+    numEntry=str2num(strEESplit{1,1})+1;
+    numExit=str2num(strEESplit{2,1})+1;
     allTrajs=cell(numEntry,numExit);
     allTrajTimesteps=cell(numEntry,numExit);
 
@@ -68,6 +72,7 @@ if isfile("phoenix_checkpoint_hash_test.mat")==0 || forceRecalcCheckPoint==true
         end
     end
 
+    %store the entery/exit lat/lon for the simulation
     entryLatLon(numEntry,2)=0;
     exitLatLon(numEntry,2)=0;
     isFirst=1;
@@ -93,7 +98,8 @@ if isfile("phoenix_checkpoint_hash_test.mat")==0 || forceRecalcCheckPoint==true
         end
     end
 
-    isStartFound=0;
+    %start preprocessing trajectories
+    isStartFound=0;%boolean to see if a trajectory has started
     prevTraj=-1;
     rejectingTraj=-1;
     for i=1:size(rawTrajs,1)
@@ -114,7 +120,7 @@ if isfile("phoenix_checkpoint_hash_test.mat")==0 || forceRecalcCheckPoint==true
             if rejectingTraj==rawTrajs{i,1}
                 continue
             end
-            if rand(1,1)<-0.9
+            if rand(1,1)<dropChance
                 rejectingTraj=rawTrajs{i,1};
                 continue
             end
@@ -300,6 +306,7 @@ if isVisualize==1
     % figure(2)
     % clf
 end
+%check if cars actually need to be moved or not
 if isfijOnly==true
     entryExitStatistics(numEntry,numExit)=0;
     exitColorStatistics(numExit,size(entryColor,1))=0;
@@ -475,6 +482,9 @@ else
             end
             scatterHandles=[];
         end
+
+        %Smooth the simulation as the input data is street point to street
+        %point instead of a smooth movement
         for m=1:size(allTrajStates,1)
             for n=1:size(allTrajStates,2)
                 for o=1:size(allTrajStates{m,n},1)
@@ -606,9 +616,9 @@ else
             % pause(1.0)
             effectiveSimDuration=effectiveSimDuration+1;
         end
-        currentTime=currentTime+seconds(1)
-        rawCounter=rawCounter+1
-        pause(0.001)
+        currentTime=currentTime+seconds(1);
+        rawCounter=rawCounter+1;
+        % pause(0.001)
     end
     for c=1:size(allColorLocations,1)
         averageColorAverageDistance(c,1)=(sumColorMinDistance(c,1)/effectiveSimDuration)*6.8986113164*22*1609.34;

@@ -1,28 +1,33 @@
 clc
 clear
-forceRecalcCheckPoint=false;
-isVisualize=0;
-protectionTimePercentage=0.5;
+dropChance=0;%The chance to drop a trajectory to trim the number of cars
+forceRecalcCheckPoint=false;% force to reclaculate preprocessing the trajectories
+isVisualize=0;% set to 1 to visualize the simulation
+protectionTimePercentage=0.5;% Obfuscation parameter: The percentage that a car should be unprotected to be counted
 epsilon=5;%color selection mixture
-simStartEndOffset=2500;
-protectionDistance=150;
-downtownImg = imread("PhoenixMap.png");
-downtownImg = imrotate(downtownImg,180);
-downtownImg = flip(downtownImg,2);
-downtownImg = im2double(downtownImg);
-isfijOnly=true;
+simStartEndOffset=2500;%Warm up simulation so that at the beginning of the simulation there are cars in the region
+protectionDistance=150;% Obfuscation parameter: The distance a car should be isolated to be considered unprotected
+downtownImg = imread("PhoenixMap.png");%read image of the simulation for visualization
+downtownImg = imrotate(downtownImg,180);%for visualization
+downtownImg = flip(downtownImg,2);%for visualization
+downtownImg = im2double(downtownImg);%for visualization
+isfijOnly=false;%Check if the simulation need to really move the cars or just assign colors and cars jump to the exit
+isCheckJunctions=false;%Set to true to turn on the latest junction monitoring. INCOMPLETE
+numJunctions=4;%number of junctions to monitor
+junctionSelectionSeed=0;%seed number for junction monitoring
 if isfile("phoenix_checkpoint.mat")==0 || forceRecalcCheckPoint==true
-    opts = detectImportOptions('trajPhoenixNorthWest_20E.csv');
+    opts = detectImportOptions('trajPhoenixNorthWest_20E.csv');%read the actual trajectory data
     opts = setvartype(opts, 5, 'string');
     rawTrajs = readtable('trajPhoenixNorthWest_20E.csv',opts);
 
-    opts = detectImportOptions('trajPhoenixNorthWest_20E_debug.csv');
+    opts = detectImportOptions('trajPhoenixNorthWest_20E_debug.csv');%read shortest path only, used for detectin of
+    % lat/lon of enteries and exits and for visualization
     opts = setvartype(opts, 4, 'string');
     rawTrajsDebug = readtable('trajPhoenixNorthWest_20E_debug.csv',opts);
 
     trajMatDebug=table2array([rawTrajsDebug(:,2),rawTrajsDebug(:,3)]);
     uTraj=unique(trajMatDebug,'rows');
-
+    % find the bounding box of the simulation
     minX=min(uTraj(:,2));
     maxX=max(uTraj(:,2));
     minY=min(uTraj(:,1));
@@ -49,8 +54,12 @@ if isfile("phoenix_checkpoint.mat")==0 || forceRecalcCheckPoint==true
         % figure(2)
         % clf
     end
-    numEntry=20;
-    numExit=20;
+    % detect number of enteries and exits based on the debug dataset
+    strEE=table2array(rawTrajsDebug(size(rawTrajsDebug,1),1));
+    strEE=strEE{1,1};
+    strEESplit=split(strEE,'_');
+    numEntry=str2num(strEESplit{1,1})+1;
+    numExit=str2num(strEESplit{2,1})+1;
     allTrajs=cell(numEntry,numExit);
     allTrajTimesteps=cell(numEntry,numExit);
 
@@ -77,6 +86,7 @@ if isfile("phoenix_checkpoint.mat")==0 || forceRecalcCheckPoint==true
         end
     end
 
+    %store the entery/exit lat/lon for the simulation
     entryLatLon(numEntry,2)=0;
     exitLatLon(numEntry,2)=0;
     isFirst=1;
@@ -102,7 +112,8 @@ if isfile("phoenix_checkpoint.mat")==0 || forceRecalcCheckPoint==true
         end
     end
 
-    isStartFound=0;
+    %start preprocessing trajectories
+    isStartFound=0;%boolean to see if a trajectory has started
     prevTraj=-1;
     rejectingTraj=-1;
     for i=1:size(rawTrajs,1)
@@ -120,11 +131,11 @@ if isfile("phoenix_checkpoint.mat")==0 || forceRecalcCheckPoint==true
         end
         vals=split(rawTrajs{i,2}{1,1},'_');
         if isStartFound==0
-            if rejectingTraj==rawTrajs{i,1}
+            if rejectingTraj==rawTrajs{i,1}%if this traj is going to be dropped
                 continue
             end
-            if rand(1,1)<-0.9
-                rejectingTraj=rawTrajs{i,1};
+            if rand(1,1)<dropChance%randomly drop a trajectory
+                rejectingTraj=rawTrajs{i,1};%store the dropping trajectory to make sure it gets dropped in later iterations
                 continue
             end
             if exist("buildingTrajs","var")==1
@@ -135,8 +146,8 @@ if isfile("phoenix_checkpoint.mat")==0 || forceRecalcCheckPoint==true
         
         inInd=str2num(vals{1,1});
         outInd=str2num(vals{2,1});
-        if isStartFound==0
-            buildingTrajs=[];
+        if isStartFound==0%a new trajectory is found
+            buildingTrajs=[];%The currently building trajectory
             buildingTimes=cell(0,1);
             %         pause(2)
             %         figure(1)
@@ -169,12 +180,12 @@ if isfile("phoenix_checkpoint.mat")==0 || forceRecalcCheckPoint==true
                 end
             end
             buildingTimes{size(buildingTimes,1)+1,1}=d;
-        else
+        else%continue previously building trajectory
             trajLat=rawTrajs{i,3};
             trajLon=rawTrajs{i,4};
             buildingTrajs(size(buildingTrajs,1)+1,1)=trajLat;
             buildingTrajs(size(buildingTrajs,1),2)=trajLon;
-            try
+            try%try parsing the time
                 d=datetime(rawTrajs{i,5},"InputFormat","yyyy-MM-dd'T'HH:mm:ss");
             catch
                 try
@@ -193,7 +204,7 @@ if isfile("phoenix_checkpoint.mat")==0 || forceRecalcCheckPoint==true
         end
         % pause(0.02)
     end
-    allTrajs{inInd+1,outInd+1}{size(allTrajs{inInd+1,outInd+1},1)+1,1}=buildingTrajs;
+    allTrajs{inInd+1,outInd+1}{size(allTrajs{inInd+1,outInd+1},1)+1,1}=buildingTrajs;%store the built trajectory
     allTrajTimesteps{inInd+1,outInd+1}{size(allTrajTimesteps{inInd+1,outInd+1},1)+1,1}=buildingTimes;
     for i=1:size(allTrajs,1)
         for j=1:size(allTrajs,2)
@@ -239,7 +250,7 @@ if isfile("phoenix_checkpoint.mat")==0 || forceRecalcCheckPoint==true
             end
         end
     end
-    disp("!")
+
     % ASSIGN COLOR TO ENTRIES
     entryColor=cell(numEntry,1);
     counter=1;
@@ -278,6 +289,7 @@ if isfile("phoenix_checkpoint.mat")==0 || forceRecalcCheckPoint==true
     averageUncoveredTime(numColors,1)=0;
     sumUncoveredTime(numColors,1)=0;
     effectiveSimDuration=0;
+    %store the entry color by index of unique colors
     for i=1:size(entryColor,1)
         for j=1:size(entryColor{i,1},1)
             for k=1:size(uniqueColors,1)
@@ -288,18 +300,19 @@ if isfile("phoenix_checkpoint.mat")==0 || forceRecalcCheckPoint==true
         end
     end
 
-    duration=seconds(endTime-simulationTime);
-    % START SIMULATION
+    duration=seconds(endTime-simulationTime);%calculate the simulation duration
     globalMinSameColor(numGrid,numGrid)=0;
     globalMinDiffColor(numGrid,numGrid)=0;
     currentTime=simulationTime;
-    rawCounter=1;
-    rectangleHandles(numGrid,numGrid)=0;
-    isVisSimActive=0;
-    save("phoenix_checkpoint.mat",'-regexp', '^(?!isVisualize$|protectionTimePercentage$|epsilon$|simStartEndOffset$|protectionDistance$|downtownImg$).*')
+    rawCounter=1;%simulation counter
+    rectangleHandles(numGrid,numGrid)=0;%variable to store matlab rectangle handles for visualization
+    isVisSimActive=0;%don't visualize simulation during warmup
+    %save preprocessed trajectories except simulation parameters
+    save("phoenix_checkpoint.mat",'-regexp', '^(?!isVisualize$|protectionTimePercentage$|epsilon$|simStartEndOffset$|protectionDistance$|downtownImg$|isfijOnly$).*')
 else
     load("phoenix_checkpoint.mat")
 end
+%calculate entry/color cumulative probability matrix for easy sampling
 entryColorProb(numEntry,numExit)=0;
 cumEntryColorProb(numEntry,numExit)=0;
 % entryColorProb=eye(numEntry,numExit);%DEBUGGING!
@@ -317,6 +330,7 @@ for i=1:numEntry
         end
     end
 end
+%check if cars actually need to be moved or not
 if isfijOnly==true
     entryExitStatistics(numEntry,numExit)=0;
     exitColorStatistics(numExit,size(entryColor,1))=0;
@@ -399,7 +413,7 @@ else
         for m=1:size(allTrajStates,1)
             for n=1:size(allTrajStates,2)
                 for o=1:size(allTrajStates{m,n},1)
-                    if allTrajStates{m,n}(o,1)==-2
+                    if allTrajStates{m,n}(o,1)==-2%if trajectory has not yet entered simulation
                         if allTrajTimesteps{m,n}{o,1}{1,1}<=currentTime
                             allTrajStates{m,n}(o,1)=1;
                             % colorIndex=1+floor(rand(1,1)*size(entryColor{m,1},1));
@@ -418,7 +432,7 @@ else
                             % simTrajColors{m,n}(o,1)=colorIndices(colorIndex,1);
                             simTrajColors{m,n}(o,1)=colorIndex;
                         end
-                    elseif allTrajStates{m,n}(o,1)>0
+                    elseif allTrajStates{m,n}(o,1)>0%if trajectory is active in simulation simulation
                         lastIndex=size(allTrajTimesteps{m,n}{o,1},1);
                         if allTrajTimesteps{m,n}{o,1}{lastIndex,1}<=currentTime
                             allTrajStates{m,n}(o,1)=-1;% TRAJ ENDED
@@ -468,6 +482,9 @@ else
             end
             scatterHandles=[];
         end
+
+        %Smooth the simulation as the input data is street point to street
+        %point instead of a smooth movement
         for m=1:size(allTrajStates,1)
             for n=1:size(allTrajStates,2)
                 for o=1:size(allTrajStates{m,n},1)
@@ -548,10 +565,10 @@ else
                             % end
                         end
                     end
-                    if minDistInternal*6.8986113164*22*1609.34>protectionDistance
+                    if minDistInternal*6.8986113164*22*1609.34>protectionDistance%convert the distance
                         numIsolatedTrajIndices(allColorLocations{c,1}(m,3),1)=numIsolatedTrajIndices(allColorLocations{c,1}(m,3),1)+1;
                         % disp('DEBUG!!!!')
-                    elseif numIsolatedTrajIndices(allColorLocations{c,1}(m,3),1)<300
+                    elseif numIsolatedTrajIndices(allColorLocations{c,1}(m,3),1)<300%if a car is isolated for less than 5 minutes, remove it as isolated car
                         numIsolatedTrajIndices(allColorLocations{c,1}(m,3),1)=0;
                     end
                     numTrajJumps(allColorLocations{c,1}(m,3),1)=numTrajJumps(allColorLocations{c,1}(m,3),1)+1;
@@ -600,7 +617,7 @@ else
         end
         currentTime=currentTime+seconds(1);
         rawCounter=rawCounter+1;
-        pause(0.001)
+        % pause(0.001)
     end
     for c=1:size(allColorLocations,1)
         averageColorAverageDistance(c,1)=(sumColorMinDistance(c,1)/effectiveSimDuration)*6.8986113164*22*1609.34;

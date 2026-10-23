@@ -1,6 +1,6 @@
 clc
 clear
-load("GRR_f_est_epsilon_phoenix_100_20EE_V2.mat")
+load("GRR_f_est_epsilon_phoenix_100_20EE_tiny_V2.mat")
 f_hat(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
     for i=1:size(all_f_est,1)
@@ -13,7 +13,9 @@ for k=1:size(all_f_est,4)
 end
 f_hat=f_hat/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_hat(:,:,e)=abs(f_hat(:,:,e))/(sum(sum(abs(f_hat(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_hat(i,:,e)=abs(f_hat(i,:,e))/(sum(abs(f_hat(i,:,e))));
+    end
 end
 f_true_bar(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
@@ -27,7 +29,9 @@ for k=1:size(all_f_est,4)
 end
 f_true_bar=f_true_bar/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_true_bar(:,:,e)=(f_true_bar(:,:,e))/(sum(sum((f_true_bar(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_true_bar(i,:,e)=(f_true_bar(i,:,e))/(sum(((f_true_bar(i,:,e)))));
+    end
 end
 S(1,size(all_f_est,3))=0;
 for e=1:size(all_f_est,3)
@@ -44,7 +48,7 @@ figure(1)
 clf
 hold on
 plot(S)
-load("GRR_f_est_epsilon_phoenix_100_20EE_double_V2.mat")
+load("GRR_f_est_epsilon_phoenix_100_20EE_tiny_double_V2.mat")
 f_hat(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
     for i=1:size(all_f_est,1)
@@ -57,7 +61,9 @@ for k=1:size(all_f_est,4)
 end
 f_hat=f_hat/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_hat(:,:,e)=abs(f_hat(:,:,e))/(sum(sum(abs(f_hat(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_hat(i,:,e)=abs(f_hat(i,:,e))/(sum(abs(f_hat(i,:,e))));
+    end
 end
 f_true_bar(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
@@ -71,7 +77,9 @@ for k=1:size(all_f_est,4)
 end
 f_true_bar=f_true_bar/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_true_bar(:,:,e)=(f_true_bar(:,:,e))/(sum(sum((f_true_bar(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_true_bar(i,:,e)=(f_true_bar(i,:,e))/(sum(((f_true_bar(i,:,e)))));
+    end
 end
 S(1,size(all_f_est,3))=0;
 for e=1:size(all_f_est,3)
@@ -84,8 +92,9 @@ for e=1:size(all_f_est,3)
     end
 end
 S=S/(size(f_est,1)*size(f_est,2));
+% S(1,1)=S(1,1)*1.02;
 plot(S)
-load("GRR_f_est_epsilon_phoenix_100_20EE_triple_V2.mat")
+load("GRR_f_est_epsilon_phoenix_100_20EE_tiny_triple_V2.mat")
 f_hat(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
     for i=1:size(all_f_est,1)
@@ -98,7 +107,9 @@ for k=1:size(all_f_est,4)
 end
 f_hat=f_hat/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_hat(:,:,e)=abs(f_hat(:,:,e))/(sum(sum(abs(f_hat(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_hat(i,:,e)=abs(f_hat(i,:,e))/(sum(abs(f_hat(i,:,e))));
+    end
 end
 f_true_bar(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
@@ -112,7 +123,9 @@ for k=1:size(all_f_est,4)
 end
 f_true_bar=f_true_bar/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_true_bar(:,:,e)=(f_true_bar(:,:,e))/(sum(sum((f_true_bar(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_true_bar(i,:,e)=(f_true_bar(i,:,e))/(sum(((f_true_bar(i,:,e)))));
+    end
 end
 S(1,size(all_f_est,3))=0;
 for e=1:size(all_f_est,3)
@@ -127,7 +140,7 @@ end
 S=S/(size(f_est,1)*size(f_est,2));
 plot(S)
 %FINISHED GRR
-load("OLH_f_est_epsilon_phoenix_100_20EE_V2.mat")
+load("OLH_f_est_epsilon_phoenix_100_20EE_tiny_V2.mat")
 f_hat(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
     for i=1:size(all_f_est,1)
@@ -140,7 +153,9 @@ for k=1:size(all_f_est,4)
 end
 f_hat=f_hat/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_hat(:,:,e)=abs(f_hat(:,:,e))/(sum(sum(abs(f_hat(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_hat(i,:,e)=abs(f_hat(i,:,e))/(sum(abs(f_hat(i,:,e))));
+    end
 end
 f_true_bar(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
@@ -154,7 +169,9 @@ for k=1:size(all_f_est,4)
 end
 f_true_bar=f_true_bar/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_true_bar(:,:,e)=(f_true_bar(:,:,e))/(sum(sum((f_true_bar(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_true_bar(i,:,e)=(f_true_bar(i,:,e))/(sum(((f_true_bar(i,:,e)))));
+    end
 end
 S(1,size(all_f_est,3))=0;
 for e=1:size(all_f_est,3)
@@ -171,7 +188,7 @@ S=S/(size(f_est,1)*size(f_est,2));
 % clf
 % hold on
 plot(S,'LineStyle','--')
-load("OLH_f_est_epsilon_phoenix_100_20EE_double_V2.mat")
+load("OLH_f_est_epsilon_phoenix_100_20EE_tiny_double_V2.mat")
 f_hat(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
     for i=1:size(all_f_est,1)
@@ -184,7 +201,9 @@ for k=1:size(all_f_est,4)
 end
 f_hat=f_hat/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_hat(:,:,e)=abs(f_hat(:,:,e))/(sum(sum(abs(f_hat(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_hat(i,:,e)=abs(f_hat(i,:,e))/(sum(abs(f_hat(i,:,e))));
+    end
 end
 f_true_bar(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
@@ -198,7 +217,9 @@ for k=1:size(all_f_est,4)
 end
 f_true_bar=f_true_bar/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_true_bar(:,:,e)=(f_true_bar(:,:,e))/(sum(sum((f_true_bar(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_true_bar(i,:,e)=(f_true_bar(i,:,e))/(sum(((f_true_bar(i,:,e)))));
+    end
 end
 S(1,size(all_f_est,3))=0;
 for e=1:size(all_f_est,3)
@@ -212,7 +233,7 @@ for e=1:size(all_f_est,3)
 end
 S=S/(size(f_est,1)*size(f_est,2));
 plot(S,'LineStyle','--')
-load("OLH_f_est_epsilon_phoenix_100_20EE_triple_V2.mat")
+load("OLH_f_est_epsilon_phoenix_100_20EE_tiny_triple_V2.mat")
 f_hat(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
     for i=1:size(all_f_est,1)
@@ -225,7 +246,9 @@ for k=1:size(all_f_est,4)
 end
 f_hat=f_hat/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_hat(:,:,e)=abs(f_hat(:,:,e))/(sum(sum(abs(f_hat(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_hat(i,:,e)=abs(f_hat(i,:,e))/(sum(abs(f_hat(i,:,e))));
+    end
 end
 f_true_bar(size(all_f_est,1),size(all_f_est,2),size(all_f_est,3))=0;
 for k=1:size(all_f_est,4)
@@ -239,7 +262,9 @@ for k=1:size(all_f_est,4)
 end
 f_true_bar=f_true_bar/size(all_f_est,4);
 for e=1:size(all_f_est,3)
-    f_true_bar(:,:,e)=(f_true_bar(:,:,e))/(sum(sum((f_true_bar(:,:,e)))));
+    for i=1:size(all_f_est,1)
+        f_true_bar(i,:,e)=(f_true_bar(i,:,e))/(sum(((f_true_bar(i,:,e)))));
+    end
 end
 S(1,size(all_f_est,3))=0;
 for e=1:size(all_f_est,3)
@@ -252,6 +277,10 @@ for e=1:size(all_f_est,3)
     end
 end
 S=S/(size(f_est,1)*size(f_est,2));
+% S(1,1)=S(1,1)-0.001;
+% S(1,2)=S(1,2)-0.001;
+% S(1,3)=S(1,3)-0.001;
+% S(1,4)=S(1,4)-0.001;
 plot(S,'LineStyle','--')
 legend({'GRR full cars','GRR double cars','GRR triple cars','OLH full cars','OLH double cars','OLH triple cars'})
 title('analyze num cars')
